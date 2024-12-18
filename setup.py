@@ -4,7 +4,13 @@ setup(name='CliffordBuilder', packages=find_packages(include=["clifford_builder"
       description="Circuit sampler from Clifford group",
       author="Anton Perepelenko", author_email="anton.perepelenko@achaad.eu",
       maintainer_email="anton.perepelenko@achaad.eu",
-      install_requires=[],
+      install_requires=[
+            "qiskit>=1.3",
+            "numpy>=2.2.0",
+            "matplotlib>=3.10.0",
+            "pylatexenc>=2.10",
+            "termtables>=0.2.4"
+      ],
       setup_requires=["pytest-runner"],
       tests_require=["pytest"],
       test_suite="tests",)
