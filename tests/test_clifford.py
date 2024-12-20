@@ -149,3 +149,9 @@ def test_print_tableau(capsys):
 
     with raises(ValueError):
         clifford.print_tableau(tableau, representation="aaa")
+
+def test___check_normalisation():
+    tableau = np.array([[0, 0, 1, 0, 1], [1, 1, 0, 1, 0]])
+    assert clifford.__check_normalisation(tableau) == False
+    tableau = np.array([[1, 0, 0, 0, 0], [0, 0, 1, 0, 0]])
+    assert clifford.__check_normalisation(tableau) == True
