@@ -356,8 +356,11 @@ def print_tableau(tableau: np.ndarray, representation: str = "text") -> None:
         header.append("S")
 
         termtables.print(np.vectorize(lambda t: "1" if t else "0")(tableau), header)
+        return
     if representation == "mpl":
         raise NotImplementedError("Matplotlib representation is not implemented. See issue #8")
+    else:
+        raise ValueError(f"Unknown representation: {representation}")
 
 
 if __name__ == '__main__':
