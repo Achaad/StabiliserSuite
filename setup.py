@@ -5,12 +5,15 @@ setup(name='CliffordBuilder', packages=find_packages(include=["clifford_builder"
       author="Anton Perepelenko", author_email="anton.perepelenko@achaad.eu",
       maintainer_email="anton.perepelenko@achaad.eu",
       install_requires=[
-            "qiskit>=1.3",
-            "numpy>=2.2.0",
-            "matplotlib>=3.10.0",
-            "pylatexenc>=2.10",
-            "termtables>=0.2.4"
+          "qiskit>=1.3",
+          "numpy>=2.2.0",
+          "matplotlib>=3.10.0",
+          "pylatexenc>=2.10",
+          "termtables>=0.2.4"
       ],
       setup_requires=["pytest-runner"],
-      tests_require=["pytest"],
-      test_suite="tests",)
+      tests_require=[
+          "pytest",
+          "tox>=4.23.2",
+          "coverage>=7.6.9"],
+      test_suite="tests", )
