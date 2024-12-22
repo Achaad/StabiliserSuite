@@ -150,8 +150,184 @@ def test_print_tableau(capsys):
     with raises(ValueError):
         clifford.print_tableau(tableau, representation="aaa")
 
+
 def test___check_normalisation():
     tableau = np.array([[0, 0, 1, 0, 1], [1, 1, 0, 1, 0]])
     assert clifford.__check_normalisation(tableau) == False
     tableau = np.array([[1, 0, 0, 0, 0], [0, 0, 1, 0, 0]])
     assert clifford.__check_normalisation(tableau) == True
+
+
+def test___step_1():
+    tableau = np.array([[1, 0, 0, 1, 1, 0, 0], [1, 1, 0, 1, 1, 0, 0]])
+    qc = QuantumCircuit(3)
+    clifford.__step_1(tableau, qc)
+    assert len(qc.data) == 2
+    assert qc.data[0].name == 's'
+    assert qc.data[0].qubits[0]._index == 0
+    assert qc.data[1].name == 'h'
+    assert qc.data[1].qubits[0]._index == 1
+    expected_tableau = np.array([[1, 1, 0, 0, 0, 0, 0], [1, 1, 0, 0, 1, 0, 0]])
+    assert np.array_equal(tableau, expected_tableau)
+
+
+def test___step_2():
+    qc = QuantumCircuit(4)
+    tableau = np.array([[1, 1, 1, 1, 0, 0, 0, 0, 0], [1, 1, 1, 1, 1, 0, 0, 0, 0]])
+    clifford.__step_2(tableau, qc)
+    assert len(qc.data) == 3
+    assert qc.data[0].name == 'cx'
+    assert qc.data[0].qubits[0]._index == 0
+    assert qc.data[0].qubits[1]._index == 1
+    assert qc.data[1].name == 'cx'
+    assert qc.data[1].qubits[0]._index == 2
+    assert qc.data[1].qubits[1]._index == 3
+    assert qc.data[2].name == 'cx'
+    assert qc.data[2].qubits[0]._index == 0
+    assert qc.data[2].qubits[1]._index == 2
+
+    expected_tableau = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 1, 0, 0, 0, 0]])
+    assert np.array_equal(tableau, expected_tableau)
+
+
+def test___step_3():
+    qc = QuantumCircuit(3)
+    tableau = np.array([[0, 1, 0, 0, 0, 0, 0], [1, 1, 0, 1, 1, 0, 0]])
+    clifford.__step_3(tableau, qc)
+    assert len(qc.data) == 1
+    assert qc.data[0].name == 'swap'
+    assert qc.data[0].qubits[0]._index == 0
+    assert qc.data[0].qubits[1]._index == 1
+    expected_tableau = tableau = np.array([[1, 0, 0, 0, 0, 0, 0], [1, 1, 0, 1, 1, 0, 0]])
+    assert np.array_equal(tableau, expected_tableau)
+
+    with raises(RuntimeError):
+        qc = QuantumCircuit(3)
+        tableau = np.array([[1, 1, 1, 0, 0, 0, 0], [1, 1, 0, 1, 1, 0, 0]])
+        clifford.__step_3(tableau, qc)
+
+
+def test___step_4():
+    qc = QuantumCircuit(3)
+    tableau = np.array([[1, 0, 0, 0, 0, 0, 0], [1, 1, 0, 1, 1, 0, 0]])
+    clifford.__step_4(tableau, qc)
+    assert len(qc.data) == 1
+    assert qc.data[0].name == 'h'
+    assert qc.data[0].qubits[0]._index == 0
+    expected_tableau = np.array([[0, 0, 0, 1, 0, 0, 0], [1, 1, 0, 1, 1, 0, 0]])
+    assert np.array_equal(tableau, expected_tableau)
+
+    qc = QuantumCircuit(2)
+    tableau = np.array([[1, 0, 0, 0, 0], [0, 1, 1, 0, 0]])
+    clifford.__step_4(tableau, qc)
+    assert len(qc.data) == 0
+    expected_tableau = np.array([[1, 0, 0, 0, 0], [0, 1, 1, 0, 0]])
+    assert np.array_equal(tableau, expected_tableau)
+
+
+def test___step_5():
+    qc = QuantumCircuit(1)
+    tableau = np.array([[1, 0, 0], [0, 1, 1]])
+    clifford.__step_5(tableau, qc)
+    assert len(qc.data) == 1
+    assert qc.data[0].name == 'x'
+    assert qc.data[0].qubits[0]._index == 0
+    expected_tableau = np.array([[1, 0, 0], [0, 1, 0]])
+    assert np.array_equal(tableau, expected_tableau)
+
+    qc = QuantumCircuit(1)
+    tableau = np.array([[1, 0, 1], [0, 1, 1]])
+    clifford.__step_5(tableau, qc)
+    assert len(qc.data) == 1
+    assert qc.data[0].name == 'y'
+    assert qc.data[0].qubits[0]._index == 0
+    expected_tableau = np.array([[1, 0, 0], [0, 1, 0]])
+    assert np.array_equal(tableau, expected_tableau)
+
+    qc = QuantumCircuit(1)
+    tableau = np.array([[1, 0, 1], [0, 1, 0]])
+    clifford.__step_5(tableau, qc)
+    assert len(qc.data) == 1
+    assert qc.data[0].name == 'z'
+    assert qc.data[0].qubits[0]._index == 0
+    expected_tableau = np.array([[1, 0, 0], [0, 1, 0]])
+    assert np.array_equal(tableau, expected_tableau)
+
+
+def test___generate_random_tableau():
+    tab1 = clifford.__generate_random_tableau(8)
+    tab2 = clifford.__generate_random_tableau(8)
+    assert not np.array_equal(tab1, tab2)
+
+
+def test___perform_sweeping():
+    qc = QuantumCircuit(4)
+    tableau = np.array([[1, 1, 1, 1, 0, 1, 1, 0, 0], [1, 1, 1, 1, 1, 1, 1, 0, 1]])
+    clifford.__perform_sweeping(tableau, qc)
+    assert len(qc.data) == 9
+    assert qc.data[0].name == 's'
+    assert qc.data[0].qubits[0]._index == 1
+    assert qc.data[1].name == 's'
+    assert qc.data[1].qubits[0]._index == 2
+    assert qc.data[2].name == 'cx'
+    assert qc.data[2].qubits[0]._index == 0
+    assert qc.data[2].qubits[1]._index == 1
+    assert qc.data[3].name == 'cx'
+    assert qc.data[3].qubits[0]._index == 2
+    assert qc.data[3].qubits[1]._index == 3
+    assert qc.data[4].name == 'cx'
+    assert qc.data[4].qubits[0]._index == 0
+    assert qc.data[4].qubits[1]._index == 2
+    assert qc.data[5].name == 'h'
+    assert qc.data[5].qubits[0]._index == 0
+    assert qc.data[6].name == 's'
+    assert qc.data[6].qubits[0]._index == 0
+    assert qc.data[7].name == 'h'
+    assert qc.data[7].qubits[0]._index == 0
+    assert qc.data[8].name == 'x'
+    assert qc.data[8].qubits[0]._index == 0
+
+    expected_tableau = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0, 0, 0]])
+    assert np.array_equal(tableau, expected_tableau)
+
+    qc = QuantumCircuit(3)
+    tableau = np.array([[0, 0, 0, 0, 1, 0, 0], [1, 1, 0, 1, 1, 0, 0]])
+    clifford.__perform_sweeping(tableau, qc)
+    assert len(qc.data) == 7
+    assert qc.data[0].name == 'h'
+    assert qc.data[0].qubits[0]._index == 1
+    assert qc.data[1].name == 'swap'
+    assert qc.data[1].qubits[0]._index == 0
+    assert qc.data[1].qubits[1]._index == 1
+    assert qc.data[2].name == 'h'
+    assert qc.data[2].qubits[0]._index == 0
+    assert qc.data[3].name == 's'
+    assert qc.data[3].qubits[0]._index == 0
+    assert qc.data[4].name == 's'
+    assert qc.data[4].qubits[0]._index == 1
+    assert qc.data[5].name == 'cx'
+    assert qc.data[5].qubits[0]._index == 0
+    assert qc.data[5].qubits[1]._index == 1
+    assert qc.data[6].name == 'h'
+    assert qc.data[6].qubits[0]._index == 0
+    expected_tableau = np.array([[1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0]])
+    assert np.array_equal(tableau, expected_tableau)
+
+    qc = QuantumCircuit(2)
+    tableau = np.array([[0, 1, 0, 0, 0], [0, 0, 0, 1, 0]])
+    clifford.__perform_sweeping(tableau, qc)
+    assert len(qc.data) == 1
+    assert qc.data[0].name == 'swap'
+    assert qc.data[0].qubits[0]._index == 0
+    assert qc.data[0].qubits[1]._index == 1
+    expected_tableau = np.array([[1, 0, 0, 0, 0], [0, 0, 1, 0, 0]])
+    assert np.array_equal(tableau, expected_tableau)
+
+    qc = QuantumCircuit(1)
+    tableau = np.array([[0, 1, 0], [1, 0, 0]])
+    clifford.__perform_sweeping(tableau, qc)
+    assert len(qc.data) == 1
+    assert qc.data[0].name == 'h'
+    assert qc.data[0].qubits[0]._index == 0
+    expected_tableau = np.array([[1, 0, 0], [0, 1, 0]])
+    assert np.array_equal(tableau, expected_tableau)

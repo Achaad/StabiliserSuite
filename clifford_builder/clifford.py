@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 import termtables
 
 
-def generate_clifford_group(qubit_count: int, add_barriers: bool = False) -> QuantumCircuit:
+def sample_clifford_group(qubit_count: int, add_barriers: bool = False) -> QuantumCircuit:
     """
     Samples random Clifford operator.
     Uses algorithm presented by Ewout van den Berg (https://arxiv.org/pdf/2008.06011).
@@ -331,7 +331,6 @@ def __apply_pauli(tableau: np.ndarray, qc: QuantumCircuit, qubit: int, pauli: st
         qc.z(qubit + shift)
     else:
         raise ValueError(f"Unknown pauli: {pauli}")
-
     for i, row in enumerate(tableau):
         row_pauli = __get_pauli(tableau, i, qubit)
         if row_pauli != pauli_lower and row_pauli != 'I':
@@ -361,10 +360,3 @@ def print_tableau(tableau: np.ndarray, representation: str = "text") -> None:
         raise NotImplementedError("Matplotlib representation is not implemented. See issue #8")
     else:
         raise ValueError(f"Unknown representation: {representation}")
-
-
-if __name__ == '__main__':
-    qcirc = generate_clifford_group(4, True)
-
-    qcirc.draw("mpl")
-    plt.show()
