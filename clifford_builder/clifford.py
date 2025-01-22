@@ -2,7 +2,7 @@ import numpy as np
 import qiskit
 from qiskit import QuantumCircuit
 import termtables
-import utils
+from clifford_builder import utils
 
 
 def sample_clifford_group(qubit_count: int, add_barriers: bool = False) -> QuantumCircuit:
