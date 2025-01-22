@@ -1,8 +1,9 @@
 import numpy as np
 from qiskit import QuantumCircuit
+from qiskit.transpiler import CouplingMap
 from sympy.testing.pytest import raises
 
-from clifford_builder import clifford
+from clifford_builder import clifford, utils
 
 
 def test___apply_hadamard():
@@ -336,3 +337,30 @@ def test___check_if_tableau_suits():
 
     tableau = np.array([[0, 0, 0], [0, 1, 0]])
     assert clifford.__check_if_tableau_suits(tableau) is False
+
+
+def test___generate_anticommuting_tablueau():
+    row = clifford.__generate_anticommuting_tableau(3)
+    assert clifford.__check_if_tableau_suits(row) is True
+    assert utils.__find_qubit_count(row) == 3
+    assert utils.__do_paulis_anticommute(row) is True
+
+def test___step_3_with_coupling_map():
+    qc: QuantumCircuit = QuantumCircuit(2)
+    row: np.ndarray = np.array([[0,1,0,0,0], [0,1,0,0,0]])
+
+    coupling_map = CouplingMap([])
+    assert clifford.__step_3(row, qc, coupling_map=coupling_map, max_distance=1) is False
+    coupling_map = CouplingMap([[0, 2], [1 ,2]])
+    assert clifford.__step_3(row, qc, coupling_map=coupling_map, max_distance=1) is False
+    assert clifford.__step_3(row, qc, coupling_map=coupling_map, max_distance=2) is True
+
+def test___step_2_with_coupling_map():
+    qc: QuantumCircuit = QuantumCircuit(3)
+    row: np.ndarray = np.array([[1, 1, 1, 0, 0, 0, 0], [1, 0, 0, 1, 0, 0, 0]])
+
+    coupling_map = CouplingMap([])
+    assert clifford.__step_2(row, qc, coupling_map=coupling_map, max_distance=1) is False
+    coupling_map = CouplingMap([[0, 2], [1, 2]])
+    assert clifford.__step_2(row, qc, coupling_map=coupling_map, max_distance=1) is False
+    assert clifford.__step_2(row, qc, coupling_map=coupling_map, max_distance=2) is True
