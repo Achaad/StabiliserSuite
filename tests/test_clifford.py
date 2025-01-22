@@ -1,8 +1,5 @@
 import numpy as np
-import qiskit
 from qiskit import QuantumCircuit
-from matplotlib import pyplot as plt
-import termtables
 from sympy.testing.pytest import raises
 
 from clifford_builder import clifford
