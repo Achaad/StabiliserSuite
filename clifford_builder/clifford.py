@@ -351,7 +351,7 @@ def __apply_pauli(tableau: np.ndarray, qc: QuantumCircuit, qubit: int, pauli: st
 def __check_if_tableau_suits(tableau: np.ndarray) -> bool:
     # Verify that the first row is not identity
     first_pauli = __get_pauli(tableau, 0, 0)
-    if first_pauli != 'I':
+    if first_pauli == 'I':
         return False
 
     # Calculate the sympathetic product

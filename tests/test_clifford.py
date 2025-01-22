@@ -328,3 +328,11 @@ def test___perform_sweeping():
     assert qc.data[0].qubits[0]._index == 0
     expected_tableau = np.array([[1, 0, 0], [0, 1, 0]])
     assert np.array_equal(tableau, expected_tableau)
+
+
+def test___check_if_tableau_suits():
+    tableau = np.array([[1, 0, 0, 0, 1, 0, 0], [1, 0, 1, 1, 0, 0, 0]])
+    assert clifford.__check_if_tableau_suits(tableau) is True
+
+    tableau = np.array([[0, 0, 0], [0, 1, 0]])
+    assert clifford.__check_if_tableau_suits(tableau) is False
