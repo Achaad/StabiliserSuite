@@ -364,3 +364,10 @@ def test___step_2_with_coupling_map():
     coupling_map = CouplingMap([[0, 2], [1, 2]])
     assert clifford.__step_2(row, qc, coupling_map=coupling_map, max_distance=1) is False
     assert clifford.__step_2(row, qc, coupling_map=coupling_map, max_distance=2) is True
+
+
+def test___sample_clifford_group():
+    coupling_map = CouplingMap([[0, 1], [1, 2]])
+    qc = clifford.sample_clifford_group(3, True, coupling_map=coupling_map, max_distance=1)
+    assert len(qc.qubits) == 3
+    assert len(qc.data) > 0
