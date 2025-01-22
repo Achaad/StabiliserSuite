@@ -6,8 +6,8 @@ import termtables
 from clifford_builder import utils
 
 
-def sample_clifford_group(qubit_count: int, add_barriers: bool = False, coupling_map: CouplingMap = None) -> (
-        QuantumCircuit):
+def sample_clifford_group(qubit_count: int, add_barriers: bool = False, coupling_map: CouplingMap = None,
+                          max_distance: int = 1) -> (QuantumCircuit):
     """
     Samples random Clifford operator.
     Uses algorithm presented by Ewout van den Berg (https://arxiv.org/pdf/2008.06011).
@@ -20,14 +20,14 @@ def sample_clifford_group(qubit_count: int, add_barriers: bool = False, coupling
 
     for i in range(qubit_count):
         # Generate rows until the anticommuting Paulis are found
-        row: np.ndarray = __generate_random_tableau(qubit_count - i)
-        while not utils.__do_paulis_anticommute(row):
-            row = __generate_random_tableau(qubit_count - i)
+        row: np.ndarray = __generate_anticommuting_tableau(qubit_count - i)
 
         # Perform sweeping
         step_circuit: QuantumCircuit = qiskit.QuantumCircuit(qubit_count, qubit_count)
-        while not __perform_sweeping(row, qc, iteration=i, coupling_map=coupling_map):
+        while not __perform_sweeping(row, step_circuit, iteration=i, coupling_map=coupling_map,
+                                     max_distance=max_distance):
             step_circuit.clear()
+            row = __generate_anticommuting_tableau(qubit_count - i)
 
         qc.compose(step_circuit, inplace=True)
 
@@ -38,7 +38,7 @@ def sample_clifford_group(qubit_count: int, add_barriers: bool = False, coupling
 
 
 def __perform_sweeping(tableau: np.ndarray, qc: QuantumCircuit, iteration: int = 0,
-                       coupling_map: CouplingMap = None) -> bool:
+                       coupling_map: CouplingMap = None, max_distance: int = 1) -> bool:
     """
     Performs sweeping operation on the tableau.
     :param tableau: The tableau on which the sweeping operation is performed.
@@ -53,11 +53,11 @@ def __perform_sweeping(tableau: np.ndarray, qc: QuantumCircuit, iteration: int =
     __step_1(tableau, qc, shift=iteration)
     if __check_normalisation(tableau):
         return True
-    if not __step_2(tableau, qc, shift=iteration, coupling_map=coupling_map):
+    if not __step_2(tableau, qc, shift=iteration, coupling_map=coupling_map, max_distance=max_distance):
         return False
     if __check_normalisation(tableau):
         return True
-    if not __step_3(tableau, qc, shift=iteration, coupling_map=coupling_map):
+    if not __step_3(tableau, qc, shift=iteration, coupling_map=coupling_map, max_distance=max_distance):
         return False
     if __check_normalisation(tableau):
         return True
@@ -69,7 +69,7 @@ def __perform_sweeping(tableau: np.ndarray, qc: QuantumCircuit, iteration: int =
     __step_1(tableau, qc, row_index=1, shift=iteration)
     if __check_normalisation(tableau):
         return True
-    if not __step_2(tableau, qc, row_index=1, shift=iteration, coupling_map=coupling_map):
+    if not __step_2(tableau, qc, row_index=1, shift=iteration, coupling_map=coupling_map, max_distance=max_distance):
         return False
     if __check_normalisation(tableau):
         return True
@@ -105,7 +105,7 @@ def __step_1(tableau: np.ndarray, qc: QuantumCircuit, row_index: int = 0, shift:
 def __step_2(tableau: np.ndarray,
              qc: QuantumCircuit,
              row_index: int = 0,
-             shift: int = 0, coupling_map: CouplingMap = None) -> bool:
+             shift: int = 0, coupling_map: CouplingMap = None, max_distance: int = 1) -> bool:
     """
     Performs the second step of the sweeping algorithm by leaving only one operation in X-block.
     Column indexing is shifted from actual by shift value.
@@ -127,7 +127,7 @@ def __step_2(tableau: np.ndarray,
             if i % 2 == 0:
                 # Verify whether CNOT can be applied
                 if coupling_map is not None:
-                    if coupling_map.distance(coefficients[i] + shift, coefficients[i + 1] + shift) > 1:
+                    if coupling_map.distance(coefficients[i] + shift, coefficients[i + 1] + shift) > max_distance:
                         return False
                 __apply_cnot(tableau, qc, coefficients[i], coefficients[i + 1], shift=shift)
 
@@ -137,7 +137,8 @@ def __step_2(tableau: np.ndarray,
     return True
 
 
-def __step_3(tableau: np.ndarray, qc: QuantumCircuit, shift: int = 0, coupling_map: CouplingMap = None) -> bool:
+def __step_3(tableau: np.ndarray, qc: QuantumCircuit, shift: int = 0, coupling_map: CouplingMap = None,
+             max_distance: int = 1) -> bool:
     """
     Performs the third step of the sweeping algorithm by putting non-zero X-element into the first column.
     Column indexing is shifted from actual by shift value.
@@ -158,7 +159,7 @@ def __step_3(tableau: np.ndarray, qc: QuantumCircuit, shift: int = 0, coupling_m
 
     if len(coefficients) == 1 and coefficients[0] != 0:
         if coupling_map is not None:
-            if coupling_map.distance(coefficients[0] + shift, coefficients[1] + shift) > 1:
+            if coupling_map.distance(0 + shift, coefficients[0] + shift) > max_distance:
                 return False
         __apply_swap(tableau, qc, 0, coefficients[0], shift)
 
@@ -210,6 +211,19 @@ def __generate_random_tableau(qubit_count: int) -> np.ndarray:
     """
     rng = np.random.default_rng()
     return rng.choice([False, True], size=(2, 2 * qubit_count + 1))
+
+
+def __generate_anticommuting_tableau(qubit_count: int) -> np.ndarray:
+    """
+    Generates random tableau row with anticommuting Paulis.
+    :param qubit_count: The amount of qubits in a tableau.
+    :return: Randomly sampled tableau with anticommuting Paulis.
+    """
+    row = __generate_random_tableau(qubit_count)
+    while not __check_if_tableau_suits(row):
+        row = __generate_random_tableau(qubit_count)
+
+    return row
 
 
 def __apply_hadamard(tableau: np.ndarray, qc: QuantumCircuit, qubit: int, shift: int = 0) -> None:
