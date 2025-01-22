@@ -1,8 +1,8 @@
 import numpy as np
 import qiskit
 from qiskit import QuantumCircuit
-from matplotlib import pyplot as plt
 import termtables
+import utils
 
 
 def sample_clifford_group(qubit_count: int, add_barriers: bool = False) -> QuantumCircuit:
@@ -90,7 +90,7 @@ def __step_1(tableau: np.ndarray, qc: QuantumCircuit, row_index: int = 0, shift:
     :param shift: Column index shift, corresponds to the sweeping iteration.
     :return: None
     """
-    starting_index: int = (tableau.shape[1] - 1) // 2
+    starting_index: int = utils.__find_qubit_count(tableau)
     for i in range(starting_index):
         if tableau[row_index][starting_index + i]:
             if tableau[row_index][i]:
@@ -111,7 +111,7 @@ def __step_2(tableau: np.ndarray, qc: QuantumCircuit, row_index: int = 0, shift:
     """
     # Determine the set of indices where the coefficient is non-zero
     coefficients = list()
-    for i in range((tableau.shape[1] - 1) // 2):
+    for i in range(utils.__find_qubit_count(tableau)):
         if tableau[row_index][i]:
             coefficients.append(i)
 
@@ -163,7 +163,7 @@ def __step_4(tableau: np.ndarray, qc: QuantumCircuit, shift: int = 0) -> None:
     :param shift: Column index shift, corresponds to the sweeping iteration.
     :return: None
     """
-    z_start: int = (tableau.shape[1] - 1) // 2
+    z_start: int = utils.__find_qubit_count(tableau)
     # If the second Pauli is equal to +- Z_1, we skip this step
     if not tableau[1][0] and tableau[1][z_start]:
         return
@@ -211,7 +211,7 @@ def __apply_hadamard(tableau: np.ndarray, qc: QuantumCircuit, qubit: int, shift:
     :return: None
     """
     qc.h(qubit + shift)
-    z_start: int = (tableau.shape[1] - 1) // 2
+    z_start: int = utils.__find_qubit_count(tableau)
 
     # Swaps columns in the tableau representation
     for row in tableau:
@@ -230,7 +230,7 @@ def __apply_s(tableau: np.ndarray, qc: QuantumCircuit, qubit: int, shift: int = 
     :return: None
     """
     qc.s(qubit + shift)
-    z_start: int = (tableau.shape[1] - 1) // 2
+    z_start: int = utils.__find_qubit_count(tableau)
 
     # Swaps columns in the tableau representation
     for row in tableau:
@@ -249,7 +249,7 @@ def __apply_cnot(tableau: np.ndarray, qc: QuantumCircuit, control_qubit: int, ta
     :return: None
     """
     qc.cx(control_qubit + shift, target_qubit + shift)
-    z_start: int = (tableau.shape[1] - 1) // 2
+    z_start: int = utils.__find_qubit_count(tableau)
 
     # Swaps columns in the tableau representation
     for row in tableau:
@@ -268,7 +268,7 @@ def __apply_swap(tableau: np.ndarray, qc: QuantumCircuit, qubit_1: int, qubit_2:
     :return: None
     """
     qc.swap(qubit_1 + shift, qubit_2 + shift)  # Shift already applied to qubit 2
-    z_start: int = (tableau.shape[1] - 1) // 2
+    z_start: int = utils.__find_qubit_count(tableau)
     for row in tableau:
         # X-swap
         temp = row[qubit_1]
@@ -287,7 +287,7 @@ def __check_normalisation(tableau: np.ndarray) -> bool:
     :param tableau: Tableau to be checked.
     :return: True if tableau is normalised.
     """
-    z_start: int = (tableau.shape[1] - 1) // 2
+    z_start: int = utils.__find_qubit_count(tableau)
     return np.array_equal(np.nonzero(tableau[0])[0], [0]) and np.array_equal(np.nonzero(tableau[1])[0], [z_start])
 
 
@@ -299,7 +299,7 @@ def __get_pauli(tableau: np.ndarray, row: int, qubit: int) -> str:
     :param qubit: Index of qubit.
     :return: Name of the Pauli gate.
     """
-    z_start: int = (tableau.shape[1] - 1) // 2
+    z_start: int = utils.__find_qubit_count(tableau)
     if tableau[row][qubit]:
         if tableau[row][z_start + qubit]:
             return 'y'
@@ -337,6 +337,16 @@ def __apply_pauli(tableau: np.ndarray, qc: QuantumCircuit, qubit: int, pauli: st
             row[-1] = not row[-1]
 
 
+def __check_if_tableau_suits(tableau: np.ndarray) -> bool:
+    # Verify that the first row is not identity
+    first_pauli = __get_pauli(tableau, 0, 0)
+    if first_pauli != 'I':
+        return False
+
+    # Calculate the sympathetic product
+    return utils.__do_paulis_anticommute(tableau)
+
+
 def print_tableau(tableau: np.ndarray, representation: str = "text") -> None:
     """
     Prints tableau representation of the circuit.
@@ -344,7 +354,7 @@ def print_tableau(tableau: np.ndarray, representation: str = "text") -> None:
     :param representation: The representation model. "text" for text, and "mpl" for matplotlib.
     :return: None
     """
-    qubit_count: int = (tableau.shape[1] - 1) // 2
+    qubit_count: int = utils.__find_qubit_count(tableau)
 
     if representation == "text":
         header: list[str] = list()
