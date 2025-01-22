@@ -16,22 +16,10 @@ def sample_clifford_group(qubit_count: int, add_barriers: bool = False) -> Quant
     qc: QuantumCircuit = qiskit.QuantumCircuit(qubit_count, qubit_count)
 
     for i in range(qubit_count):
-        # This is a test code for having the same results as in the paper
-        # if i == 0:
-        #     row = np.array([[True, True, True, True, False, True, True, False, False], [True, True, True,
-        #                                                                                 True, True, True, True,
-        #                                                                                 False, False]])
-        # if i == 1:
-        #     row = np.array([[0, 0, 0, 0, 1, 0, 0], [1, 1, 0, 1, 1, 0, 0]])
-        #
-        # if i == 2:
-        #     row = np.array([[0, 1, 0, 0, 0], [0, 0, 0, 1, 0]])
-        #
-        # if i == 3:
-        #     row = np.array([[0, 1, 0], [1, 0, 0]])
-
-        # Generate row
+        # Generate rows until the anticommuting Paulis are found
         row: np.ndarray = __generate_random_tableau(qubit_count - i)
+        while not utils.__do_paulis_anticommute(row):
+            row = __generate_random_tableau(qubit_count - i)
 
         # Perform sweeping
         __perform_sweeping(row, qc, iteration=i)
