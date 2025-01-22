@@ -1,16 +1,19 @@
 import numpy as np
 import qiskit
 from qiskit import QuantumCircuit
+from qiskit.transpiler import CouplingMap
 import termtables
 from clifford_builder import utils
 
 
-def sample_clifford_group(qubit_count: int, add_barriers: bool = False) -> QuantumCircuit:
+def sample_clifford_group(qubit_count: int, add_barriers: bool = False, coupling_map: CouplingMap = None) -> (
+        QuantumCircuit):
     """
     Samples random Clifford operator.
     Uses algorithm presented by Ewout van den Berg (https://arxiv.org/pdf/2008.06011).
     :param qubit_count: The amount of qubits in the generated circuit.
     :param add_barriers: Whether the barriers should be added. NB! Barriers might slow down execution.
+    :param coupling_map: The coupling map of the generated circuit.
     :return: Generated quantum circuit.
     """
     qc: QuantumCircuit = qiskit.QuantumCircuit(qubit_count, qubit_count)
@@ -22,50 +25,62 @@ def sample_clifford_group(qubit_count: int, add_barriers: bool = False) -> Quant
             row = __generate_random_tableau(qubit_count - i)
 
         # Perform sweeping
-        __perform_sweeping(row, qc, iteration=i)
+        step_circuit: QuantumCircuit = qiskit.QuantumCircuit(qubit_count, qubit_count)
+        while not __perform_sweeping(row, qc, iteration=i, coupling_map=coupling_map):
+            step_circuit.clear()
+
+        qc.compose(step_circuit, inplace=True)
+
         if add_barriers:
             qc.barrier()
 
     return qc
 
 
-def __perform_sweeping(tableau: np.ndarray, qc: QuantumCircuit, iteration: int = 0) -> None:
+def __perform_sweeping(tableau: np.ndarray, qc: QuantumCircuit, iteration: int = 0,
+                       coupling_map: CouplingMap = None) -> bool:
     """
     Performs sweeping operation on the tableau.
     :param tableau: The tableau on which the sweeping operation is performed.
     :param qc: Quantum circuit which is being modified.
     :param iteration: Which sweeping operation is currently being performed.
-    :return: None
+    :param coupling_map: Quantum computer qubit coupling map.
+    :return: True if tableau could be normalised successfully, False otherwise.
     """
     # Normalisation has to be checked before each step in order to avoid additional computations
     if __check_normalisation(tableau):
-        return
+        return True
     __step_1(tableau, qc, shift=iteration)
     if __check_normalisation(tableau):
-        return
-    __step_2(tableau, qc, shift=iteration)
+        return True
+    if not __step_2(tableau, qc, shift=iteration, coupling_map=coupling_map):
+        return False
     if __check_normalisation(tableau):
-        return
-    __step_3(tableau, qc, shift=iteration)
+        return True
+    if not __step_3(tableau, qc, shift=iteration, coupling_map=coupling_map):
+        return False
     if __check_normalisation(tableau):
-        return
+        return True
     __step_4(tableau, qc, shift=iteration)
     if __check_normalisation(tableau):
-        return
+        return True
 
     # Apply steps 1 and 2 to the second row
     __step_1(tableau, qc, row_index=1, shift=iteration)
     if __check_normalisation(tableau):
-        return
-    __step_2(tableau, qc, row_index=1, shift=iteration)
+        return True
+    if not __step_2(tableau, qc, row_index=1, shift=iteration, coupling_map=coupling_map):
+        return False
     if __check_normalisation(tableau):
-        return
+        return True
 
     # Repeat step 4
     __step_4(tableau, qc, shift=iteration)
     if __check_normalisation(tableau):
-        return
+        return True
     __step_5(tableau, qc, shift=iteration)
+
+    return True
 
 
 def __step_1(tableau: np.ndarray, qc: QuantumCircuit, row_index: int = 0, shift: int = 0) -> None:
@@ -76,7 +91,7 @@ def __step_1(tableau: np.ndarray, qc: QuantumCircuit, row_index: int = 0, shift:
     :param qc: Quantum circuit which is being modified.
     :param row_index: Index of the row of the tableau.
     :param shift: Column index shift, corresponds to the sweeping iteration.
-    :return: None
+    :return: None.
     """
     starting_index: int = utils.__find_qubit_count(tableau)
     for i in range(starting_index):
@@ -87,7 +102,10 @@ def __step_1(tableau: np.ndarray, qc: QuantumCircuit, row_index: int = 0, shift:
                 __apply_hadamard(tableau, qc, i, shift)
 
 
-def __step_2(tableau: np.ndarray, qc: QuantumCircuit, row_index: int = 0, shift: int = 0) -> None:
+def __step_2(tableau: np.ndarray,
+             qc: QuantumCircuit,
+             row_index: int = 0,
+             shift: int = 0, coupling_map: CouplingMap = None) -> bool:
     """
     Performs the second step of the sweeping algorithm by leaving only one operation in X-block.
     Column indexing is shifted from actual by shift value.
@@ -95,39 +113,39 @@ def __step_2(tableau: np.ndarray, qc: QuantumCircuit, row_index: int = 0, shift:
     :param qc: Quantum circuit which is being modified.
     :param row_index: Index of the row of the tableau.
     :param shift: Column index shift, corresponds to the sweeping iteration.
-    :return: None
+    :param coupling_map: Quantum computer qubit coupling map.
+    :return: True if step can be completed with provided coupling map.
     """
     # Determine the set of indices where the coefficient is non-zero
-    coefficients = list()
-    for i in range(utils.__find_qubit_count(tableau)):
-        if tableau[row_index][i]:
-            coefficients.append(i)
+    coefficients = [
+        i for i in range(utils.__find_qubit_count(tableau)) if tableau[row_index][i]
+    ]
 
-    temp = list()
     while len(coefficients) > 1:
         # Apply CNOT gate pairwise to qubits at even locations
         for i in range(len(coefficients) - 1):
             if i % 2 == 0:
+                # Verify whether CNOT can be applied
+                if coupling_map is not None:
+                    if coupling_map.distance(coefficients[i] + shift, coefficients[i + 1] + shift) > 1:
+                        return False
                 __apply_cnot(tableau, qc, coefficients[i], coefficients[i + 1], shift=shift)
 
         # Retain indices at even locations
-        for i in range(len(coefficients)):
-            if i % 2 == 0:
-                temp.append(coefficients[i])
+        coefficients = coefficients[::2]
 
-        coefficients.clear()
-        coefficients.extend(temp)
-        temp.clear()
+    return True
 
 
-def __step_3(tableau: np.ndarray, qc: QuantumCircuit, shift: int = 0) -> None:
+def __step_3(tableau: np.ndarray, qc: QuantumCircuit, shift: int = 0, coupling_map: CouplingMap = None) -> bool:
     """
     Performs the third step of the sweeping algorithm by putting non-zero X-element into the first column.
     Column indexing is shifted from actual by shift value.
     :param tableau: Tableau on which the operation is being performed.
     :param qc: Quantum circuit which is being modified.
     :param shift: Column index shift, corresponds to the sweeping iteration.
-    :return: None
+    :param coupling_map: Quantum computer qubit coupling map.
+    :return: True if step can be completed with provided coupling map.
     """
     # Determine the set of indices where the coefficient is non-zero
     coefficients: list[int] = list()
@@ -139,7 +157,12 @@ def __step_3(tableau: np.ndarray, qc: QuantumCircuit, shift: int = 0) -> None:
         raise RuntimeError(f"Too many coefficients after step 2: {coefficients}")
 
     if len(coefficients) == 1 and coefficients[0] != 0:
+        if coupling_map is not None:
+            if coupling_map.distance(coefficients[0] + shift, coefficients[1] + shift) > 1:
+                return False
         __apply_swap(tableau, qc, 0, coefficients[0], shift)
+
+    return True
 
 
 def __step_4(tableau: np.ndarray, qc: QuantumCircuit, shift: int = 0) -> None:
@@ -149,7 +172,7 @@ def __step_4(tableau: np.ndarray, qc: QuantumCircuit, shift: int = 0) -> None:
     :param tableau: Tableau on which the operation is being performed.
     :param qc: Quantum circuit which is being modified.
     :param shift: Column index shift, corresponds to the sweeping iteration.
-    :return: None
+    :return: None.
     """
     z_start: int = utils.__find_qubit_count(tableau)
     # If the second Pauli is equal to +- Z_1, we skip this step
@@ -166,7 +189,7 @@ def __step_5(tableau: np.ndarray, qc: QuantumCircuit, shift: int = 0) -> None:
     :param tableau: Tableau on which the operation is being performed.
     :param qc: Quantum circuit which is being modified.
     :param shift: Column index shift, corresponds to the sweeping iteration.
-    :return: None
+    :return: None.
     """
     phase_index: int = tableau.shape[1] - 1
     if not tableau[0][phase_index] and tableau[1][phase_index]:
@@ -196,7 +219,7 @@ def __apply_hadamard(tableau: np.ndarray, qc: QuantumCircuit, qubit: int, shift:
     :param qc: Quantum circuit which is being modified.
     :param qubit: The qubit to which the gate is applied.
     :param shift: Shift in qubit indexing.
-    :return: None
+    :return: None.
     """
     qc.h(qubit + shift)
     z_start: int = utils.__find_qubit_count(tableau)
@@ -215,7 +238,7 @@ def __apply_s(tableau: np.ndarray, qc: QuantumCircuit, qubit: int, shift: int = 
     :param qc: Quantum circuit which is being modified.
     :param qubit: The qubit to which the gate is applied.
     :param shift: Shift in qubit indexing.
-    :return: None
+    :return: None.
     """
     qc.s(qubit + shift)
     z_start: int = utils.__find_qubit_count(tableau)
@@ -234,7 +257,7 @@ def __apply_cnot(tableau: np.ndarray, qc: QuantumCircuit, control_qubit: int, ta
     :param control_qubit: The control qubit to which the gate is applied.
     :param target_qubit: The target qubit to which the gate is applied.
     :param shift: Shift in qubit indexing.
-    :return: None
+    :return: None.
     """
     qc.cx(control_qubit + shift, target_qubit + shift)
     z_start: int = utils.__find_qubit_count(tableau)
@@ -253,7 +276,7 @@ def __apply_swap(tableau: np.ndarray, qc: QuantumCircuit, qubit_1: int, qubit_2:
     :param qubit_1: The first qubit to which the gate is applied.
     :param qubit_2: The second qubit to which the gate is applied.
     :param shift: Shift in qubit indexing.
-    :return: None
+    :return: None.
     """
     qc.swap(qubit_1 + shift, qubit_2 + shift)  # Shift already applied to qubit 2
     z_start: int = utils.__find_qubit_count(tableau)
@@ -308,7 +331,7 @@ def __apply_pauli(tableau: np.ndarray, qc: QuantumCircuit, qubit: int, pauli: st
     :param qubit: The qubit to which the gate is applied.
     :param pauli: Pauli gate.
     :param shift: Shift in qubit indexing.
-    :return: None
+    :return: None.
     """
     pauli_lower = pauli.lower()
     if pauli_lower == 'x':
@@ -340,7 +363,7 @@ def print_tableau(tableau: np.ndarray, representation: str = "text") -> None:
     Prints tableau representation of the circuit.
     :param tableau: Tableau to be printed.
     :param representation: The representation model. "text" for text, and "mpl" for matplotlib.
-    :return: None
+    :return: None.
     """
     qubit_count: int = utils.__find_qubit_count(tableau)
 
