@@ -15,5 +15,6 @@ setup(name='CliffordBuilder', packages=find_packages(include=["clifford_builder"
       tests_require=[
           "pytest",
           "tox>=4.23.2",
-          "coverage>=7.6.9"],
+          "coverage>=7.6.9",
+          "sympy>=1.13.3"],
       test_suite="tests", )
