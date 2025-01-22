@@ -1,19 +1,20 @@
 import numpy as np
 import qiskit
 from qiskit import QuantumCircuit
-from qiskit.transpiler import CouplingMap
+from qiskit.transpiler import CouplingMap, CouplingError
 import termtables
 from clifford_builder import utils
 
 
 def sample_clifford_group(qubit_count: int, add_barriers: bool = False, coupling_map: CouplingMap = None,
-                          max_distance: int = 1) -> (QuantumCircuit):
+                          max_distance: int = 1) -> QuantumCircuit:
     """
     Samples random Clifford operator.
     Uses algorithm presented by Ewout van den Berg (https://arxiv.org/pdf/2008.06011).
     :param qubit_count: The amount of qubits in the generated circuit.
     :param add_barriers: Whether the barriers should be added. NB! Barriers might slow down execution.
     :param coupling_map: The coupling map of the generated circuit.
+    :param max_distance: Maximum allowed distance between qubits in the coupling map.
     :return: Generated quantum circuit.
     """
     qc: QuantumCircuit = qiskit.QuantumCircuit(qubit_count, qubit_count)
@@ -127,7 +128,10 @@ def __step_2(tableau: np.ndarray,
             if i % 2 == 0:
                 # Verify whether CNOT can be applied
                 if coupling_map is not None:
-                    if coupling_map.distance(coefficients[i] + shift, coefficients[i + 1] + shift) > max_distance:
+                    try:
+                        if coupling_map.distance(coefficients[i] + shift, coefficients[i + 1] + shift) > max_distance:
+                            return False
+                    except CouplingError:
                         return False
                 __apply_cnot(tableau, qc, coefficients[i], coefficients[i + 1], shift=shift)
 
@@ -159,7 +163,10 @@ def __step_3(tableau: np.ndarray, qc: QuantumCircuit, shift: int = 0, coupling_m
 
     if len(coefficients) == 1 and coefficients[0] != 0:
         if coupling_map is not None:
-            if coupling_map.distance(0 + shift, coefficients[0] + shift) > max_distance:
+            try:
+                if coupling_map.distance(0 + shift, coefficients[0] + shift) > max_distance:
+                    return False
+            except CouplingError:
                 return False
         __apply_swap(tableau, qc, 0, coefficients[0], shift)
 
