@@ -1,5 +1,6 @@
 from _pytest.python_api import raises
 from qiskit import QuantumCircuit
+from qiskit.quantum_info import Operator, Statevector
 from qiskit.transpiler import CouplingMap
 
 from clifford_builder import circuit
@@ -46,3 +47,14 @@ def test_cnot():
     assert qc.data[3].name == 'cx'
     assert qc.data[3].qubits[0]._index == 1
     assert qc.data[3].qubits[1]._index == 2
+
+    # Verify that the resulting operation is the same
+    coupling_map = CouplingMap([[0, 1], [2, 3], [1, 2]])
+    qc_test = QuantumCircuit(4)
+    qc_control = QuantumCircuit(4)
+
+    circuit.cnot(qc_test, 0, 2, coupling_map=coupling_map)
+    qc_control.cx(0, 2)
+    u_test = Operator(qc_test)
+    u_control = Operator(qc_control)
+    assert u_control.equiv(u_test)

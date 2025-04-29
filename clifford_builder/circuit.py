@@ -1,4 +1,6 @@
+import numpy as np
 from qiskit import QuantumCircuit
+from qiskit.circuit.library import iSwapGate
 from qiskit.transpiler import CouplingMap, CouplingError
 
 
