@@ -1,13 +1,10 @@
 # Define Pauli and standard single-qubit gates
 import itertools
-from multiprocessing import Pool, cpu_count
-from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 from numba import njit
 from qiskit.circuit import Gate
 from qiskit.circuit.library import iSwapGate
-from qiskit.quantum_info import random_clifford
 from tqdm import tqdm
 
 # Define basic gates
@@ -18,16 +15,6 @@ Z = np.array([[1, 0], [0, -1]], dtype=complex)
 H = (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype=complex)
 S = np.array([[1, 0], [0, 1j]], dtype=complex)
 
-
-def get_clifford_gates() -> list[Gate]:
-    """
-    Returns a list of Clifford gates.
-
-    :return: List of Clifford gates.
-    """
-
-    for i in range(24):
-        random_clifford()
 
 # Rotation gates (parameterized)
 def Rx(theta):
@@ -86,28 +73,28 @@ def generate_two_qubit_gates():
     return __generate_two_qubit_gates(gates)
 
 
-def __are_equal_up_to_global_phase(U1, U2, atol=1e-8):
-    """Check if two unitary matrices are equal up to a global phase."""
-    inner = np.vdot(U1.flatten(), U2.flatten())
-    if np.abs(inner) < atol:
-        return False
-    phase = inner / np.abs(inner)
-    return np.allclose(U1, U2 * phase, atol=atol)
-
-
 @njit
-def __are_equal_up_to_global_phase_numba(U1, U2, atol=1e-8):
-    # TODO: create unit tests for that
-    # TODO: verify that this computation is correct, maybe there is need for complex conjugate instead of U2,
-    #  be careful of complex phase
-    """JIT-compiled check for global phase equality between two unitary matrices."""
-    dot = np.vdot(U1.flatten(), U2.flatten())
-    norm = np.abs(dot)
-    if norm < 1e-12:
-        return False
-    phase = dot / norm
-    diff = U1 - phase * U2
-    return np.all(np.abs(diff) < atol)
+def __are_equal_up_to_global_phase(u1, u2, atol=1e-8):
+    """
+        Check if two unitary matrices are equal up to a global phase.
+
+        This function determines whether two unitary matrices, `U1` and `U2`,
+        are equivalent up to a global phase factor. A global phase factor means
+        that the matrices differ only by a scalar multiplication of a complex
+        exponential (e.g., e^(i*theta)).
+
+        Args:
+            u1 (np.ndarray): The first unitary matrix.
+            u2 (np.ndarray): The second unitary matrix.
+            atol (float): Absolute tolerance for numerical comparison. Default is 1e-8.
+
+        Returns:
+            bool: True if the matrices are equal up to a global phase, False otherwise.
+        """
+    u = u1 @ u2.conj().T
+    phase = np.diag(u)[0]
+
+    return np.allclose(u, phase * np.eye(u.shape[0]), atol=atol)
 
 
 @njit
@@ -138,19 +125,12 @@ def find_matching_combinations(gate_dict, target_matrix, output, max_depth=3, al
                 print(f"Checking depth {depth} ({total} combinations)...")
                 total = len(gate_names) ** depth
 
-                # with Pool(processes=cpu_count()) as pool:
-                #     for chunk in chunked(tasks, 100000):
-                #         args = [(seq, gate_dict, target_matrix, allow_global_phase) for seq in chunk]
-                #         for res in tqdm(pool.imap_unordered(_check_sequence_unpack, args), total=len(chunk)):
-                #             if res is not None:
-                #                 results.append(res)
-
                 for sequence in tqdm(itertools.product(gate_names, repeat=depth), total=total):
                     result = np.eye(target_matrix.shape[0], dtype=complex)
                     for gate_name in sequence:
                         result = result @ gate_dict[gate_name]
                     if allow_global_phase:
-                        if __are_equal_up_to_global_phase_numba(result, target_matrix):
+                        if __are_equal_up_to_global_phase(result, target_matrix):
                             results.append((sequence, result))
                     else:
                         if np.allclose(result, target_matrix, atol=1e-8):
