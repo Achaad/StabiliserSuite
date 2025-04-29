@@ -34,13 +34,24 @@ def rx(theta):
         [-1j * np.sin(theta / 2), np.cos(theta / 2)]
     ], dtype=complex128)
 
-
+@njit(cache=True)
 def rz(theta):
-    return np.array([
-        [np.exp(-1j * theta / 2), 0],
-        [0, np.exp(1j * theta / 2)]
-    ], dtype=complex)
+        """
+        Generate the rotation matrix for the Z-axis (Rz) in quantum computing.
 
+        This function creates a 2x2 unitary matrix representing a rotation
+        around the Z-axis by a given angle `theta`.
+
+        Args:
+            theta (float): The rotation angle in radians.
+
+        Returns:
+            np.ndarray: A 2x2 complex-valued numpy array representing the Rz matrix.
+        """
+        return np.array([
+            [np.exp(-1j * theta / 2), 0],
+            [0, np.exp(1j * theta / 2)]
+        ], dtype=complex128)
 
 def __generate_two_qubit_gates(gates_dict):
     tensor_gates = {}
@@ -54,7 +65,6 @@ def __generate_two_qubit_gates(gates_dict):
                                    [0, 1, 0, 0]], dtype=complex)
     tensor_gates['iSwap'] = iSwapGate().to_matrix()
     return tensor_gates
-
 
 def generate_two_qubit_gates():
     gates = {
@@ -104,7 +114,19 @@ def __are_equal_up_to_global_phase(u1, u2, atol=1e-8):
 
 @njit
 def __multiply_sequence(matrices):
-    result = np.eye(matrices[0].shape[0], dtype=np.complex128)
+    """
+    Multiply a sequence of matrices in order.
+
+    This function takes a list of matrices and computes their product
+    in the given order. The multiplication is performed iteratively.
+
+    Args:
+        matrices (list of np.ndarray): A list of 2D numpy arrays (matrices) to be multiplied.
+
+    Returns:
+        np.ndarray: The resulting matrix after multiplying all matrices in the sequence.
+    """
+    result = np.eye(matrices[0].shape[0], dtype=complex128)
     for m in matrices:
         result = result @ m
     return result
@@ -145,31 +167,3 @@ def find_matching_combinations(gate_dict, target_matrix, output, max_depth=3, al
             f.write(results)
             f.flush()
             print(results)
-
-
-def chunked(iterable, size):
-    """Yield successive chunks of given size from an iterable (supports generators)."""
-    it = iter(iterable)
-    while True:
-        chunk = list(itertools.islice(it, size))
-        if not chunk:
-            break
-        yield chunk
-
-
-def _check_sequence_unpack(args):
-    return _check_sequence(*args)
-
-
-def _check_sequence(sequence, gate_dict, target_matrix, allow_global_phase):
-    """Worker function to compute a single combination."""
-    result = np.eye(target_matrix.shape[0], dtype=complex)
-    for gate_name in sequence:
-        result = result @ gate_dict[gate_name]
-    if allow_global_phase:
-        if __are_equal_up_to_global_phase(result, target_matrix):
-            return sequence, result
-    else:
-        if np.allclose(result, target_matrix, atol=1e-8):
-            return sequence, result
-    return None
