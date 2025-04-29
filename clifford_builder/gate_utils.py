@@ -4,7 +4,7 @@ import itertools
 import numpy as np
 from numba import njit
 from numba.core.types import complex128
-from qiskit.circuit.library import iSwapGate
+from qiskit.circuit.library import iSwapGate, XGate, YGate, ZGate, IGate, HGate, SGate, CZGate, SwapGate
 from tqdm import tqdm
 
 # Define basic gates
@@ -66,26 +66,48 @@ def __generate_two_qubit_gates(gates_dict):
     tensor_gates['iSwap'] = iSwapGate().to_matrix()
     return tensor_gates
 
-def generate_two_qubit_gates():
-    gates = {
-        'I': I,
-        'X': X,
-        'Y': Y,
-        'Z': Z,
-        'H': H,
-        'S': S,
-    }
+def generate_two_qubit_clifford_gates():
+        """
+        Generate a dictionary of two-qubit Clifford gates.
 
-    thetas = {
-        'pi/2': np.pi / 2,
-        'pi': np.pi, '3pi/2': 3 * np.pi / 2, '-3pi/2': -3 * np.pi / 2, '-pi': -np.pi, '-pi/2': - np.pi / 2}
-    for theta, angle in thetas.items():
+        This function creates a collection of two-qubit Clifford gates, including
+        standard single-qubit gates, rotation gates, and special gates like iSwap and CZ.
+        It also generates tensor products of sinqle-qubit gates to form two-qubit gates.
+
+        Returns:
+            dict: A dictionary where keys are gate names (str) and values are 2D numpy arrays
+                  representing the corresponding gate matrices.
+        """
+        # Define standard single-qubit gates
+        gates = {
+            IGate().name: IGate().to_matrix(),
+            XGate().name: XGate().to_matrix(),
+            YGate().name: YGate().to_matrix(),
+            ZGate().name: ZGate().to_matrix(),
+            HGate().name: HGate().to_matrix(),
+            SGate().name: SGate().to_matrix(),
+        }
+
+        # Define rotation gates with various angles
+        thetas = {
+            'pi/2': np.pi / 2,
+            'pi': np.pi, '3pi/2': 3 * np.pi / 2, '-3pi/2': -3 * np.pi / 2, '-pi': -np.pi, '-pi/2': - np.pi / 2
+        }
+        for theta, angle in thetas.items():
+            gates.update({
+                f'Rx({theta})': rx(angle),
+                f'Rz({theta})': rz(angle)
+            })
+
+        # Add special two-qubit gates
         gates.update({
-            f'Rx({theta})': rx(angle),
-            f'Rz({theta})': rz(angle)
+            iSwapGate().name: iSwapGate().to_matrix(),
+            CZGate().name: CZGate().to_matrix(),
+            SwapGate().name: SGate().to_matrix()
         })
 
-    return __generate_two_qubit_gates(gates)
+        # Generate tensor products of the gates
+        return __generate_two_qubit_gates(gates)
 
 
 @njit
@@ -164,6 +186,6 @@ def find_matching_combinations(gate_dict, target_matrix, output, max_depth=3, al
         finally:
             f.write('\n')
             f.write('COMPLETE RESULTS:')
-            f.write(results)
+            f.write(', '.join(f'({a}, {b})' for a, b in results))
             f.flush()
             print(results)
