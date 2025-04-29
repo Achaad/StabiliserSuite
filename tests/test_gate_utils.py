@@ -2,7 +2,7 @@ import numpy as np
 
 from numba.core.types import complex128
 from clifford_builder.gate_utils import __are_equal_up_to_global_phase, rx, rz, __generate_two_qubit_gates, \
-    generate_two_qubit_gates, __multiply_sequence
+    generate_two_qubit_clifford_gates, __multiply_sequence, find_matching_combinations
 from qiskit.circuit.library import iSwapGate
 
 
@@ -97,14 +97,16 @@ def test___generate_two_qubit_gates():
 
 
 def test_generate_two_qubit_gates():
-    result = generate_two_qubit_gates()
-    expected_keys = {'I⊗I', 'I⊗X', 'I⊗Y', 'I⊗Z', 'I⊗H', 'I⊗S',
-                     'X⊗I', 'X⊗X', 'X⊗Y', 'X⊗Z', 'X⊗H', 'X⊗S',
-                     'Y⊗I', 'Y⊗X', 'Y⊗Y', 'Y⊗Z', 'Y⊗H', 'Y⊗S',
-                     'Z⊗I', 'Z⊗X', 'Z⊗Y', 'Z⊗Z', 'Z⊗H', 'Z⊗S',
-                     'H⊗I', 'H⊗X', 'H⊗Y', 'H⊗Z', 'H⊗H', 'H⊗S',
-                     'S⊗I', 'S⊗X', 'S⊗Y', 'S⊗Z', 'S⊗H', 'S⊗S',
-                     'Rx(pi/2)⊗Rx(pi/2)', 'Rz(pi/2)⊗Rz(pi/2)', 'cx', 'iSwap'}
+    result = generate_two_qubit_clifford_gates()
+    expected_keys = {'id⊗id', 'x⊗x', 'y⊗y', 'z⊗z', 'h⊗h', 's⊗s'}
+    assert set(result.keys()).issuperset(expected_keys)
+
+    result = generate_two_qubit_clifford_gates()
+    expected_keys = {'Rx(pi/2)⊗Rx(pi/2)', 'Rz(pi/2)⊗Rz(pi/2)', 'Rx(pi)⊗Rx(pi)', 'Rz(pi)⊗Rz(pi)'}
+    assert set(result.keys()).issuperset(expected_keys)
+
+    result = generate_two_qubit_clifford_gates()
+    expected_keys = {'cx', 'iSwap'}
     assert set(result.keys()).issuperset(expected_keys)
 
     gates_dict = {}
@@ -112,10 +114,12 @@ def test_generate_two_qubit_gates():
     expected_keys = {'cx', 'iSwap'}
     assert set(result.keys()) == expected_keys
 
-    result = generate_two_qubit_gates()
-    rx_pi = rx(np.pi)
-    rz_pi = rz(np.pi)
-    assert np.allclose(result['Rx(pi)⊗Rz(pi)'], np.kron(rx_pi, rz_pi))
+    custom_gate = np.array([[1, 1], [1, -1]], dtype=complex)
+    gates_dict = {'Custom': custom_gate}
+    result = __generate_two_qubit_gates(gates_dict)
+    expected_key = 'Custom⊗Custom'
+    assert expected_key in result
+    assert np.allclose(result[expected_key], np.kron(custom_gate, custom_gate))
 
 
 def test___multiply_sequence():

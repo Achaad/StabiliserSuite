@@ -11,7 +11,7 @@ from qiskit import QuantumCircuit
 from qiskit.transpiler import CouplingMap
 
 from clifford_builder.clifford import sample_clifford_group
-from clifford_builder.gate_utils import generate_two_qubit_gates, find_matching_combinations
+from clifford_builder.gate_utils import generate_two_qubit_clifford_gates, find_matching_combinations
 
 if __name__ == '__main__':
     # print("Example of random clifford circuit generation")
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     qc.draw("mpl")
     plt.show()
 
-    gates = generate_two_qubit_gates()
+    gates = generate_two_qubit_clifford_gates()
     cz = CZGate().to_matrix()
     cx = CXGate().to_matrix()
     target = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]], dtype=complex)
