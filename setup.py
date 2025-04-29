@@ -9,7 +9,9 @@ setup(name='CliffordBuilder', packages=find_packages(include=["clifford_builder"
           "numpy>=2.2.0",
           "matplotlib>=3.10.0",
           "pylatexenc>=2.10",
-          "termtables>=0.2.4"
+          "termtables>=0.2.4",
+          "numba>=0.61.0",
+          "tqdm>=4.67.0"
       ],
       setup_requires=["pytest-runner"],
       tests_require=[

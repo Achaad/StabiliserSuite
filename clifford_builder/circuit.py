@@ -1,4 +1,6 @@
+import numpy as np
 from qiskit import QuantumCircuit
+from qiskit.circuit.library import iSwapGate
 from qiskit.transpiler import CouplingMap, CouplingError
 
 
@@ -43,3 +45,42 @@ def cnot(qc: QuantumCircuit, control: int, target: int, coupling_map: CouplingMa
         qc.cx(bridge, intermediate_target)
         qc.cx(intermediate_control, bridge)
         qc.cx(bridge, intermediate_target)
+
+def cz_using_rx(qc: QuantumCircuit, control: int, target: int, coupling_map: CouplingMap = None) -> None:
+    """
+    TODO: add documentation
+    :param qc:
+    :param control:
+    :param target:
+    :param coupling_map:
+    :return:
+    """
+    # If no coupling map is provided, apply the CZ gate directly
+    if coupling_map is None:
+        qc.cz(control, target)
+        return
+
+    # Check if the control and target qubits can be connected
+    try:
+        distance = coupling_map.distance(control, target)
+    except CouplingError:
+        raise ValueError('Control and target qubits are not connected in the coupling map.')
+
+    # If the qubits are not directly connected, find a bridge
+    path = coupling_map.shortest_undirected_path(control, target)
+
+
+    # Apply the CNOT gate using the bridge to every path triplet
+    # FORWARD pass (entangling + phase)
+    for i in range(len(path) - 1):
+        a, b = path[i], path[i + 1]
+        # qc.rz(np.pi / 2, a)
+        # qc.rz(np.pi / 2, b)
+        # qc.rz(np.pi / 2, a)
+        # qc.rz(np.pi / 2, b)
+        qc.iswap(a, b)
+        qc.iswap(a, b)
+        # qc.append(iSwapGate().power(2), [a, b])
+        # qc.append(iSwapGate().power(0.5), [a, b])
+        # qc.rz(-np.pi / 2, a)
+        # qc.rz(-np.pi / 2, b)
