@@ -1,5 +1,3 @@
-from typing import final
-
 from _pytest.python_api import raises
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Operator, Statevector

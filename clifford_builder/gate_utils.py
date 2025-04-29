@@ -17,14 +17,14 @@ S = np.array([[1, 0], [0, 1j]], dtype=complex)
 
 
 # Rotation gates (parameterized)
-def Rx(theta):
+def rx(theta):
     return np.array([
         [np.cos(theta / 2), -1j * np.sin(theta / 2)],
         [-1j * np.sin(theta / 2), np.cos(theta / 2)]
     ], dtype=complex)
 
 
-def Rz(theta):
+def rz(theta):
     return np.array([
         [np.exp(-1j * theta / 2), 0],
         [0, np.exp(1j * theta / 2)]
@@ -66,8 +66,8 @@ def generate_two_qubit_gates():
         'pi': np.pi, '3pi/2': 3 * np.pi / 2, '-3pi/2': -3 * np.pi / 2, '-pi': -np.pi, '-pi/2': - np.pi / 2}
     for theta, angle in thetas.items():
         gates.update({
-            f'Rx({theta})': Rx(angle),
-            f'Rz({theta})': Rz(angle)
+            f'Rx({theta})': rx(angle),
+            f'Rz({theta})': rz(angle)
         })
 
     return __generate_two_qubit_gates(gates)
@@ -121,20 +121,14 @@ def find_matching_combinations(gate_dict, target_matrix, output, max_depth=3, al
             gate_names = list(gate_dict.keys())
 
             for depth in range(1, max_depth + 1):
-                total = len(gate_names) ** depth  # total combinations
-                print(f"Checking depth {depth} ({total} combinations)...")
-                total = len(gate_names) ** depth
-
-                for sequence in tqdm(itertools.product(gate_names, repeat=depth), total=total):
+                print(f"Checking depth {depth} ({len(gate_names) ** depth} combinations)...")
+                for sequence in tqdm(itertools.product(gate_names, repeat=depth), total=len(gate_names) ** depth):
                     result = np.eye(target_matrix.shape[0], dtype=complex)
                     for gate_name in sequence:
                         result = result @ gate_dict[gate_name]
-                    if allow_global_phase:
-                        if __are_equal_up_to_global_phase(result, target_matrix):
-                            results.append((sequence, result))
-                    else:
-                        if np.allclose(result, target_matrix, atol=1e-8):
-                            results.append((sequence, result))
+                    if (allow_global_phase and __are_equal_up_to_global_phase(result, target_matrix)) or \
+                            (not allow_global_phase and np.allclose(result, target_matrix, atol=1e-8)):
+                        results.append((sequence, result))
 
                 solutions = [a for a, _ in results]
                 print(f"Current solutions at depth {depth}: {solutions}", flush=True)
