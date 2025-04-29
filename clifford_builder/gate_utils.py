@@ -146,7 +146,6 @@ def find_matching_combinations(gate_dict, target_matrix, output, max_depth=3, al
             f.write(results)
             f.flush()
             print(results)
-    return results
 
 
 def chunked(iterable, size):
