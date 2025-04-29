@@ -3,7 +3,7 @@ import itertools
 
 import numpy as np
 from numba import njit
-from qiskit.circuit import Gate
+from numba.core.types import complex128
 from qiskit.circuit.library import iSwapGate
 from tqdm import tqdm
 
@@ -15,13 +15,24 @@ Z = np.array([[1, 0], [0, -1]], dtype=complex)
 H = (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype=complex)
 S = np.array([[1, 0], [0, 1j]], dtype=complex)
 
-
-# Rotation gates (parameterized)
+@njit(cache=True)
 def rx(theta):
+    """
+        Generate the rotation matrix for the X-axis (Rx) in quantum computing.
+
+        This function creates a 2x2 unitary matrix representing a rotation
+        around the X-axis by a given angle `theta`.
+
+        Args:
+            theta (float): The rotation angle in radians.
+
+        Returns:
+            np.ndarray: A 2x2 complex-valued numpy array representing the Rx matrix.
+        """
     return np.array([
         [np.cos(theta / 2), -1j * np.sin(theta / 2)],
         [-1j * np.sin(theta / 2), np.cos(theta / 2)]
-    ], dtype=complex)
+    ], dtype=complex128)
 
 
 def rz(theta):
@@ -32,12 +43,6 @@ def rz(theta):
 
 
 def __generate_two_qubit_gates(gates_dict):
-    """
-    Generates all 2-qubit gate matrices as tensor products from a given gate dictionary.
-
-    :param gates_dict: dict with names as keys and 2x2 numpy arrays as values
-    :return: dict of tensor products: keys as "A⊗B", values as 4x4 numpy arrays
-    """
     tensor_gates = {}
     for name1, gate1 in gates_dict.items():
         for name2, gate2 in gates_dict.items():
