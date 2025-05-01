@@ -1,9 +1,12 @@
 import numpy as np
 
-from numba.core.types import complex128
+from qiskit.circuit import Instruction
+from qiskit.circuit.library import iSwapGate, HGate, TGate, RZGate, XGate
+from qiskit.circuit.gate import Gate
+
 from clifford_builder.gate_utils import __are_equal_up_to_global_phase, rx, rz, __generate_two_qubit_gates, \
-    generate_two_qubit_clifford_gates, __multiply_sequence, find_matching_combinations, is_clifford_gate
-from qiskit.circuit.library import iSwapGate, HGate, TGate
+    generate_two_qubit_clifford_gates, __multiply_sequence, is_clifford_gate, \
+    get_non_clifford_gates, __try_instantiate_gate
 
 
 def test___are_equal_up_to_global_phase():
@@ -158,3 +161,22 @@ def test___multiply_sequence():
 def test_is_clifford_gate():
     assert is_clifford_gate(HGate())
     assert not is_clifford_gate(TGate())
+
+def test_get_non_clifford_gates():
+    gates = get_non_clifford_gates()
+    # Test that at least one non-Clifford gate exists
+    assert len(gates) > 0
+
+def test___try_instantiate_gate():
+    gates = __try_instantiate_gate(XGate)
+    assert len(gates) == 1
+    assert isinstance(gates[0], Instruction)
+    assert isinstance(gates[0], XGate)
+
+    gates = __try_instantiate_gate(RZGate)
+    assert len(gates) == 13
+    assert isinstance(gates[0], Instruction)
+    assert isinstance(gates[0], RZGate)
+
+    gates = __try_instantiate_gate(np.complex128)
+    assert len(gates) == 0

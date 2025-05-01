@@ -1,4 +1,5 @@
 # Define Pauli and standard single-qubit gates
+import inspect
 import itertools
 
 import numpy as np
@@ -6,7 +7,7 @@ from numba import njit
 from numba.core.types import complex128
 from qiskit import QiskitError
 from qiskit.circuit import Gate
-from qiskit.circuit.library import iSwapGate, XGate, YGate, ZGate, IGate, HGate, SGate, CZGate, SwapGate
+from qiskit.circuit.library import iSwapGate, XGate, YGate, ZGate, IGate, HGate, SGate, CZGate, SwapGate, standard_gates
 from qiskit.quantum_info import Clifford
 from tqdm import tqdm
 
@@ -199,11 +200,54 @@ def find_matching_combinations(gate_dict, target_matrix, output, max_depth=3, al
 
 
 def is_clifford_gate(gate: Gate) -> bool:
+    """
+    Check if a given quantum gate is a Clifford gate.
+
+    This function determines whether a provided quantum gate belongs to the
+    Clifford group. The Clifford group consists of gates that map Pauli operators
+    to other Pauli operators under conjugation.
+
+    Args:
+        gate (Gate): A quantum gate object from Qiskit.
+
+    Returns:
+        bool: True if the gate is a Clifford gate, False otherwise.
+    """
     try:
         Clifford(gate)
         return True
     except QiskitError:
         return False
 
+
 def get_non_clifford_gates() -> dict:
-    pass
+    gate_classes = {
+        name: gate_class
+        for name, gate_class in vars(standard_gates).items()
+        if inspect.isclass(gate_class) and issubclass(gate_class, Gate) and is_clifford_gate(gate_class())
+    }
+    return gate_classes
+
+
+def __try_instantiate_gate(gate_class) -> list[Gate]:
+        """
+        Attempt to instantiate a quantum gate class or generate parameterized instances.
+
+        This function tries to create an instance of the provided quantum gate class.
+        If the class requires a parameter for instantiation (e.g., a rotation angle),
+        it generates instances with angles ranging from -3π/2 to 3π/2 in steps of π/4.
+
+        Args:
+            gate_class (type): The class of the quantum gate to instantiate.
+
+        Returns:
+            list[Gate]: A list of instantiated quantum gate objects.
+        """
+        if not issubclass(gate_class, Gate):
+            return []
+        try:
+            return [gate_class()]
+        except TypeError:
+            # Generate thetas in range (-3π/2, 3π/2) with step π/4
+            thetas = [i * np.pi / 4 for i in range(-6, 7, 1)]
+            return [gate_class(theta) for theta in thetas]
