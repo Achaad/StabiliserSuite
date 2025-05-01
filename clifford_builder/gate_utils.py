@@ -4,7 +4,10 @@ import itertools
 import numpy as np
 from numba import njit
 from numba.core.types import complex128
+from qiskit import QiskitError
+from qiskit.circuit import Gate
 from qiskit.circuit.library import iSwapGate, XGate, YGate, ZGate, IGate, HGate, SGate, CZGate, SwapGate
+from qiskit.quantum_info import Clifford
 from tqdm import tqdm
 
 # Define basic gates
@@ -14,6 +17,7 @@ Y = np.array([[0, -1j], [1j, 0]], dtype=complex)
 Z = np.array([[1, 0], [0, -1]], dtype=complex)
 H = (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype=complex)
 S = np.array([[1, 0], [0, 1j]], dtype=complex)
+
 
 @njit(cache=True)
 def rx(theta):
@@ -34,24 +38,26 @@ def rx(theta):
         [-1j * np.sin(theta / 2), np.cos(theta / 2)]
     ], dtype=complex128)
 
+
 @njit(cache=True)
 def rz(theta):
-        """
-        Generate the rotation matrix for the Z-axis (Rz) in quantum computing.
+    """
+    Generate the rotation matrix for the Z-axis (Rz) in quantum computing.
 
-        This function creates a 2x2 unitary matrix representing a rotation
-        around the Z-axis by a given angle `theta`.
+    This function creates a 2x2 unitary matrix representing a rotation
+    around the Z-axis by a given angle `theta`.
 
-        Args:
-            theta (float): The rotation angle in radians.
+    Args:
+        theta (float): The rotation angle in radians.
 
-        Returns:
-            np.ndarray: A 2x2 complex-valued numpy array representing the Rz matrix.
-        """
-        return np.array([
-            [np.exp(-1j * theta / 2), 0],
-            [0, np.exp(1j * theta / 2)]
-        ], dtype=complex128)
+    Returns:
+        np.ndarray: A 2x2 complex-valued numpy array representing the Rz matrix.
+    """
+    return np.array([
+        [np.exp(-1j * theta / 2), 0],
+        [0, np.exp(1j * theta / 2)]
+    ], dtype=complex128)
+
 
 def __generate_two_qubit_gates(gates_dict):
     tensor_gates = {}
@@ -66,48 +72,49 @@ def __generate_two_qubit_gates(gates_dict):
     tensor_gates['iSwap'] = iSwapGate().to_matrix()
     return tensor_gates
 
+
 def generate_two_qubit_clifford_gates():
-        """
-        Generate a dictionary of two-qubit Clifford gates.
+    """
+    Generate a dictionary of two-qubit Clifford gates.
 
-        This function creates a collection of two-qubit Clifford gates, including
-        standard single-qubit gates, rotation gates, and special gates like iSwap and CZ.
-        It also generates tensor products of sinqle-qubit gates to form two-qubit gates.
+    This function creates a collection of two-qubit Clifford gates, including
+    standard single-qubit gates, rotation gates, and special gates like iSwap and CZ.
+    It also generates tensor products of sinqle-qubit gates to form two-qubit gates.
 
-        Returns:
-            dict: A dictionary where keys are gate names (str) and values are 2D numpy arrays
-                  representing the corresponding gate matrices.
-        """
-        # Define standard single-qubit gates
-        gates = {
-            IGate().name: IGate().to_matrix(),
-            XGate().name: XGate().to_matrix(),
-            YGate().name: YGate().to_matrix(),
-            ZGate().name: ZGate().to_matrix(),
-            HGate().name: HGate().to_matrix(),
-            SGate().name: SGate().to_matrix(),
-        }
+    Returns:
+        dict: A dictionary where keys are gate names (str) and values are 2D numpy arrays
+              representing the corresponding gate matrices.
+    """
+    # Define standard single-qubit gates
+    gates = {
+        IGate().name: IGate().to_matrix(),
+        XGate().name: XGate().to_matrix(),
+        YGate().name: YGate().to_matrix(),
+        ZGate().name: ZGate().to_matrix(),
+        HGate().name: HGate().to_matrix(),
+        SGate().name: SGate().to_matrix(),
+    }
 
-        # Define rotation gates with various angles
-        thetas = {
-            'pi/2': np.pi / 2,
-            'pi': np.pi, '3pi/2': 3 * np.pi / 2, '-3pi/2': -3 * np.pi / 2, '-pi': -np.pi, '-pi/2': - np.pi / 2
-        }
-        for theta, angle in thetas.items():
-            gates.update({
-                f'Rx({theta})': rx(angle),
-                f'Rz({theta})': rz(angle)
-            })
-
-        # Add special two-qubit gates
+    # Define rotation gates with various angles
+    thetas = {
+        'pi/2': np.pi / 2,
+        'pi': np.pi, '3pi/2': 3 * np.pi / 2, '-3pi/2': -3 * np.pi / 2, '-pi': -np.pi, '-pi/2': - np.pi / 2
+    }
+    for theta, angle in thetas.items():
         gates.update({
-            iSwapGate().name: iSwapGate().to_matrix(),
-            CZGate().name: CZGate().to_matrix(),
-            SwapGate().name: SGate().to_matrix()
+            f'Rx({theta})': rx(angle),
+            f'Rz({theta})': rz(angle)
         })
 
-        # Generate tensor products of the gates
-        return __generate_two_qubit_gates(gates)
+    # Add special two-qubit gates
+    gates.update({
+        iSwapGate().name: iSwapGate().to_matrix(),
+        CZGate().name: CZGate().to_matrix(),
+        SwapGate().name: SGate().to_matrix()
+    })
+
+    # Generate tensor products of the gates
+    return __generate_two_qubit_gates(gates)
 
 
 @njit
@@ -189,3 +196,14 @@ def find_matching_combinations(gate_dict, target_matrix, output, max_depth=3, al
             f.write(', '.join(f'({a}, {b})' for a, b in results))
             f.flush()
             print(results)
+
+
+def is_clifford_gate(gate: Gate) -> bool:
+    try:
+        Clifford(gate)
+        return True
+    except QiskitError:
+        return False
+
+def get_non_clifford_gates() -> dict:
+    pass

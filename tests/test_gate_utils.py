@@ -2,8 +2,8 @@ import numpy as np
 
 from numba.core.types import complex128
 from clifford_builder.gate_utils import __are_equal_up_to_global_phase, rx, rz, __generate_two_qubit_gates, \
-    generate_two_qubit_clifford_gates, __multiply_sequence, find_matching_combinations
-from qiskit.circuit.library import iSwapGate
+    generate_two_qubit_clifford_gates, __multiply_sequence, find_matching_combinations, is_clifford_gate
+from qiskit.circuit.library import iSwapGate, HGate, TGate
 
 
 def test___are_equal_up_to_global_phase():
@@ -154,3 +154,7 @@ def test___multiply_sequence():
         assert False, "Expected ValueError for incompatible matrices"
     except ValueError:
         pass
+
+def test_is_clifford_gate():
+    assert is_clifford_gate(HGate())
+    assert not is_clifford_gate(TGate())
