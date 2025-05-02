@@ -182,7 +182,7 @@ def find_matching_combinations(gate_dict, target_matrix, output=None, max_depth=
             print(f"Current solutions at depth {depth}: {solutions}", flush=True)
     finally:
         if output is not None:
-            with open(output, 'a') as f:
+            with open(output, 'a', encoding='utf-8') as f:
                 now = datetime.now(timezone.utc).astimezone()
                 now_text = now.strftime('%Y-%m-%d %H:%M:%S %Z%z')
                 f.write(f'\n{now_text} - {max_depth} depth search\n')
@@ -379,7 +379,7 @@ def __generate_multi_qubit_gates(gates_dict: dict[str, Gate], target_qubits: int
         for name2, gate2 in gates_dict.items():
             matrix2 = gate2.to_matrix()
             # Check if the combined dimensions match the target dimension
-            if matrix1.shape[0] == matrix2.shape[0] and matrix1.shape[0] * matrix2.shape[0] == dim:
+            if matrix1.shape[0] * matrix2.shape[0] == dim:
                 multi_qubit_gates[f"{name1}⊗{name2}"] = np.kron(matrix1, matrix2)
 
     return multi_qubit_gates
