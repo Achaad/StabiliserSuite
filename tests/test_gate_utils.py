@@ -1,12 +1,12 @@
 import numpy as np
 
 from qiskit.circuit import Instruction
-from qiskit.circuit.library import iSwapGate, HGate, TGate, RZGate, XGate
+from qiskit.circuit.library import iSwapGate, HGate, TGate, RZGate, XGate, CXGate, MCXGate
 from qiskit.circuit.gate import Gate
 
 from clifford_builder.gate_utils import __are_equal_up_to_global_phase, rx, rz, __generate_two_qubit_gates, \
     generate_two_qubit_clifford_gates, __multiply_sequence, is_clifford_gate, \
-    get_non_clifford_gates, __try_instantiate_gate
+    get_non_clifford_gates, __try_instantiate_gate, get_gates
 
 
 def test___are_equal_up_to_global_phase():
@@ -162,11 +162,6 @@ def test_is_clifford_gate():
     assert is_clifford_gate(HGate())
     assert not is_clifford_gate(TGate())
 
-def test_get_non_clifford_gates():
-    gates = get_non_clifford_gates()
-    # Test that at least one non-Clifford gate exists
-    assert len(gates) > 0
-
 def test___try_instantiate_gate():
     gates = __try_instantiate_gate(XGate)
     assert len(gates) == 1
@@ -180,3 +175,33 @@ def test___try_instantiate_gate():
 
     gates = __try_instantiate_gate(np.complex128)
     assert len(gates) == 0
+
+    gates = __try_instantiate_gate(CXGate)
+    assert len(gates) == 1
+    assert isinstance(gates[0], Instruction)
+    assert isinstance(gates[0], CXGate)
+
+    gates = __try_instantiate_gate(MCXGate, num_control_qubits=3)
+    assert len(gates) == 1
+    assert isinstance(gates[0], Instruction)
+    assert isinstance(gates[0], MCXGate)
+
+    gates = __try_instantiate_gate(MCXGate)
+    assert len(gates) == 1
+    assert isinstance(gates[0], Instruction)
+    assert isinstance(gates[0], CXGate) # Should resolve to 1-control CX gate
+
+def test_get_gates():
+    gates = get_gates()
+    assert "XGate" in gates
+    assert "HGate" in gates
+    assert "RZGate(1pi/4)" in gates
+    assert isinstance(gates["XGate"], XGate)
+    assert isinstance(gates["RZGate(1pi/4)"], RZGate)
+
+def test_get_non_clifford_gates():
+    gates = get_non_clifford_gates()
+    assert len(gates) > 0
+    assert "TGate" in gates
+    assert isinstance(gates["TGate"], TGate)
+    assert "HGate" not in gates
