@@ -1,7 +1,7 @@
 import numpy as np
 
 from qiskit.circuit import Instruction
-from qiskit.circuit.library import iSwapGate, HGate, TGate, RZGate, XGate, CXGate, MCXGate
+from qiskit.circuit.library import iSwapGate, HGate, TGate, RZGate, XGate, CXGate, MCXGate, CZGate, SwapGate
 from qiskit.circuit.gate import Gate
 from sympy.testing.pytest import raises
 
@@ -76,7 +76,7 @@ def test_rz():
 def test___generate_two_qubit_gates():
     gates_dict = {'I': np.eye(2, dtype=complex), 'X': np.array([[0, 1], [1, 0]], dtype=complex)}
     result = __generate_two_qubit_gates(gates_dict)
-    expected_keys = {'I⊗I', 'I⊗X', 'X⊗I', 'X⊗X', 'cx', 'iSwap'}
+    expected_keys = {'cz', 'I⊗X', 'cx', 'X⊗X', 'swap', 'iswap', 'X⊗I', 'I⊗I'}
     assert set(result.keys()) == expected_keys
 
     gates_dict = {}
@@ -86,11 +86,13 @@ def test___generate_two_qubit_gates():
                         [0, 0, 0, 1],
                         [0, 0, 1, 0],
                         [0, 1, 0, 0]], dtype=complex),
-        'iSwap': iSwapGate().to_matrix()
+        iSwapGate().name: iSwapGate().to_matrix(),
+        CZGate().name: CZGate().to_matrix(),
+        SwapGate().name: SwapGate().to_matrix()
     }
     assert set(result.keys()) == set(expected_result.keys())
     assert np.allclose(result['cx'], expected_result['cx'])
-    assert np.allclose(result['iSwap'], expected_result['iSwap'])
+    assert np.allclose(result['iswap'], expected_result['iswap'])
 
     custom_gate = np.array([[1, 1], [1, -1]], dtype=complex)
     gates_dict = {'Custom': custom_gate}
@@ -110,12 +112,12 @@ def test_generate_two_qubit_gates():
     assert set(result.keys()).issuperset(expected_keys)
 
     result = generate_two_qubit_clifford_gates()
-    expected_keys = {'cx', 'iSwap'}
+    expected_keys = {'cx', 'iswap', 'cz', 'swap'}
     assert set(result.keys()).issuperset(expected_keys)
 
     gates_dict = {}
     result = __generate_two_qubit_gates(gates_dict)
-    expected_keys = {'cx', 'iSwap'}
+    expected_keys = {'cx', 'iswap', 'cz', 'swap'}
     assert set(result.keys()) == expected_keys
 
     custom_gate = np.array([[1, 1], [1, -1]], dtype=complex)
