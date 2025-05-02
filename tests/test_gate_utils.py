@@ -3,10 +3,11 @@ import numpy as np
 from qiskit.circuit import Instruction
 from qiskit.circuit.library import iSwapGate, HGate, TGate, RZGate, XGate, CXGate, MCXGate
 from qiskit.circuit.gate import Gate
+from sympy.testing.pytest import raises
 
 from clifford_builder.gate_utils import __are_equal_up_to_global_phase, rx, rz, __generate_two_qubit_gates, \
     generate_two_qubit_clifford_gates, __multiply_sequence, is_clifford_gate, \
-    get_non_clifford_gates, __try_instantiate_gate, get_gates
+    get_non_clifford_gates, __try_instantiate_gate, get_gates, find_non_clifford_substitutions
 
 
 def test___are_equal_up_to_global_phase():
@@ -205,3 +206,10 @@ def test_get_non_clifford_gates():
     assert "TGate" in gates
     assert isinstance(gates["TGate"], TGate)
     assert "HGate" not in gates
+
+def test_find_non_clifford_substitutions():
+    gates = find_non_clifford_substitutions(XGate())
+
+    # Verify that 3+ qubit gates are not supported
+    with raises(NotImplementedError):
+        gates = find_non_clifford_substitutions(MCXGate(3))

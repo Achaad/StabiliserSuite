@@ -1,13 +1,15 @@
 # Define Pauli and standard single-qubit gates
 import inspect
 import itertools
+from datetime import datetime, timezone
 
 import numpy as np
 from numba import njit
 from numba.core.types import complex128
 from qiskit import QiskitError
-from qiskit.circuit import Gate, Instruction
-from qiskit.circuit.library import iSwapGate, XGate, YGate, ZGate, IGate, HGate, SGate, CZGate, SwapGate, standard_gates
+from qiskit.circuit import Gate, Instruction, CircuitError
+from qiskit.circuit.library import iSwapGate, XGate, YGate, ZGate, IGate, HGate, SGate, CZGate, SwapGate, \
+    standard_gates, CXGate
 from qiskit.quantum_info import Clifford
 from tqdm import tqdm
 
@@ -66,11 +68,15 @@ def __generate_two_qubit_gates(gates_dict):
         for name2, gate2 in gates_dict.items():
             name = f"{name1}⊗{name2}"
             tensor_gates[name] = np.kron(gate1, gate2)
-    tensor_gates['cx'] = np.array([[1, 0, 0, 0],
-                                   [0, 0, 0, 1],
-                                   [0, 0, 1, 0],
-                                   [0, 1, 0, 0]], dtype=complex)
-    tensor_gates['iSwap'] = iSwapGate().to_matrix()
+
+    # Add special two-qubit gates
+    tensor_gates.update({
+        CXGate().name: CXGate().to_matrix(),
+        iSwapGate().name: iSwapGate().to_matrix(),
+        CZGate().name: CZGate().to_matrix(),
+        SwapGate().name: SGate().to_matrix()
+    })
+
     return tensor_gates
 
 
@@ -106,13 +112,6 @@ def generate_two_qubit_clifford_gates():
             f'Rx({theta})': rx(angle),
             f'Rz({theta})': rz(angle)
         })
-
-    # Add special two-qubit gates
-    gates.update({
-        iSwapGate().name: iSwapGate().to_matrix(),
-        CZGate().name: CZGate().to_matrix(),
-        SwapGate().name: SGate().to_matrix()
-    })
 
     # Generate tensor products of the gates
     return __generate_two_qubit_gates(gates)
@@ -162,41 +161,40 @@ def __multiply_sequence(matrices):
     return result
 
 
-def find_matching_combinations(gate_dict, target_matrix, output, max_depth=3, allow_global_phase=True):
-    """
-    Try all sequences of gate multiplications to match the target matrix.
-
-    :param gate_dict: dict of name -> 2D np.array
-    :param target_matrix: np.array target to match
-    :param max_depth: max number of gates to combine
-    :param allow_global_phase: allow match up to global phase
-    :return: list of (sequence of gate names, result matrix)
-    """
+def find_matching_combinations(gate_dict, target_matrix, output=None, max_depth=3, allow_global_phase=True) -> list[
+    tuple[str, np.ndarray]]:
     results = []
-    with open(output, 'a') as f:
-        try:
-            gate_names = list(gate_dict.keys())
+    try:
+        gate_names = list(gate_dict.keys())
 
-            for depth in range(1, max_depth + 1):
-                print(f"Checking depth {depth} ({len(gate_names) ** depth} combinations)...")
-                for sequence in tqdm(itertools.product(gate_names, repeat=depth), total=len(gate_names) ** depth):
-                    result = np.eye(target_matrix.shape[0], dtype=complex)
-                    for gate_name in sequence:
+        for depth in range(1, max_depth + 1):
+            print(f"Checking depth {depth} ({len(gate_names) ** depth} combinations)...")
+            for sequence in tqdm(itertools.product(gate_names, repeat=depth), total=len(gate_names) ** depth):
+                result = np.eye(target_matrix.shape[0], dtype=complex)
+                for gate_name in sequence:
+                    if result.shape == gate_dict[gate_name].shape:
                         result = result @ gate_dict[gate_name]
-                    if (allow_global_phase and __are_equal_up_to_global_phase(result, target_matrix)) or \
-                            (not allow_global_phase and np.allclose(result, target_matrix, atol=1e-8)):
-                        results.append((sequence, result))
+                if (allow_global_phase and __are_equal_up_to_global_phase(result, target_matrix)) or \
+                        (not allow_global_phase and np.allclose(result, target_matrix, atol=1e-8)):
+                    results.append((sequence, result))
 
-                solutions = [a for a, _ in results]
-                print(f"Current solutions at depth {depth}: {solutions}", flush=True)
-                f.write(f"Current solutions at depth {depth}: {solutions}\n")
-                f.flush()
-        finally:
-            f.write('\n')
-            f.write('COMPLETE RESULTS:')
-            f.write(', '.join(f'({a}, {b})' for a, b in results))
-            f.flush()
-            print(results)
+            solutions = [a for a, _ in results]
+            print(f"Current solutions at depth {depth}: {solutions}", flush=True)
+    finally:
+        if output is not None:
+            with open(output, 'a') as f:
+                now = datetime.now(timezone.utc).astimezone()
+                now_text = now.strftime('%Y-%m-%d %H:%M:%S %Z%z')
+                f.write(f'\n{now_text} - {max_depth} depth search\n')
+                if len(results) == 0:
+                    f.write('NO SOLUTIONS FOUND\n')
+                    f.flush()
+                else:
+                    f.write('COMPLETE RESULTS:')
+                    f.write(', '.join(f'({a}, {b})' for a, b in results))
+                    f.write('\n')
+                    f.flush()
+    return results
 
 
 def is_clifford_gate(gate: Gate) -> bool:
@@ -220,49 +218,82 @@ def is_clifford_gate(gate: Gate) -> bool:
         return False
 
 
-def get_gates() -> dict[str, Gate | Instruction]:
+def get_gates(control: int = 0, target: int = 0, num_control_qubits: int = 1) -> dict[str, Gate | Instruction]:
     """
-    Retrieve a dictionary of quantum gates and their instances.
+    Retrieve a dictionary of quantum gates with optional control and target qubits.
 
-    This function iterates through all gate classes in the `standard_gates` module,
-    checks if they are subclasses of `Gate`, and attempts to instantiate them.
-    If a gate class can be instantiated without parameters, it is added to the dictionary.
-    If a gate class requires parameters, instances are created for angles ranging
-    from -3π/2 to 3π/2 in steps of π/4, and these instances are added to the dictionary
-    with appropriately formatted names.
+    This function iterates through the standard gates available in Qiskit,
+    attempts to instantiate them, and generates parameterized versions of
+    gates if applicable. The resulting dictionary includes gate names as keys
+    and their corresponding gate instances as values.
+
+    Args:
+        control (int, optional): The control qubit index for gates requiring control qubits. Defaults to 0.
+        target (int, optional): The target qubit index for gates requiring target qubits. Defaults to 0.
+        num_control_qubits (int, optional): The number of control qubits for gates requiring this parameter. Defaults to 1.
 
     Returns:
-        dict: A dictionary where keys are gate names (or parameterized gate names)
-              and values are the corresponding gate instances.
+        dict[str, Gate | Instruction]: A dictionary where keys are gate names (optionally parameterized)
+                                       and values are the corresponding gate instances.
     """
     gate_classes = {}
     for name, gate_class in vars(standard_gates).items():
+        # Check if the item is a class and a subclass of Gate
         if inspect.isclass(gate_class) and issubclass(gate_class, Gate):
-            gates = __try_instantiate_gate(gate_class)
+            # Attempt to instantiate the gate class
+            gates = __try_instantiate_gate(gate_class, control=control, target=target,
+                                           num_control_qubits=num_control_qubits)
             if gates:
+                # Generate parameterized gate names with angles in steps of π/4
                 thetas = [f"{i}pi/4" if i != 0 else "0" for i in range(-6, 7)]
                 gate_classes.update(
+                    # Add parameterized gates if multiple instances are generated
                     {f"{name}({theta})": gate for theta, gate in zip(thetas, gates)}
-                    if len(gates) > 1 else {name: gates[0]}
+                    if len(gates) > 1 else {name: gates[0]}  # Add single instance if only one gate is generated
                 )
     return gate_classes
 
 
-def get_non_clifford_gates() -> dict:
+def get_non_clifford_gates(control: int = 0, target: int = 1, num_control_qubits: int = 1) -> dict:
     """
     Retrieve a dictionary of non-Clifford quantum gates.
 
-    This function filters out Clifford gates from the complete set of quantum gates
-    obtained using `get_gates()`. It identifies non-Clifford gates by checking each
-    gate with the `is_clifford_gate` function.
+    This function filters out Clifford gates from the set of all available gates
+    and returns only the non-Clifford gates. It uses the `get_gates` function to
+    generate all gates and the `is_clifford_gate` function to identify Clifford gates.
+
+    Args:
+        control (int, optional): The control qubit index for gates requiring control qubits. Defaults to 0.
+        target (int, optional): The target qubit index for gates requiring target qubits. Defaults to 0.
+        num_control_qubits (int, optional): The number of control qubits for gates requiring this parameter. Defaults to 1.
 
     Returns:
-        dict: A dictionary where keys are the names of non-Clifford gates (str) and
-              values are the corresponding gate instances.
+        dict: A dictionary where keys are gate names and values are the corresponding
+              non-Clifford gate instances.
     """
-    all_gate_classes = get_gates()
+    all_gate_classes = get_gates(control=control, target=target, num_control_qubits=num_control_qubits)
     gates = {name: gate_class for name, gate_class in all_gate_classes.items() if not is_clifford_gate(gate_class)}
     return gates
+
+
+def find_non_clifford_substitutions(gate: Gate, output: str = None, max_depth: int = 3,
+                                    allow_global_phase: bool = True) -> list[tuple[str, np.ndarray]]:
+    substitutions = []
+    if gate.num_qubits == 1:
+        all_gates = get_non_clifford_gates()
+        allowed_gates = {name: gate.to_matrix() for name, gate in all_gates.items() if gate.num_qubits == 1}
+        substitutions = find_matching_combinations(allowed_gates, target_matrix=gate.to_matrix(), output=output,
+                                                   max_depth=max_depth, allow_global_phase=allow_global_phase)
+    elif gate.num_qubits == 2:
+        all_gates = get_non_clifford_gates()
+        matrices = __generate_multi_qubit_gates(all_gates, 2)
+        substitutions = find_matching_combinations(matrices, target_matrix=gate.to_matrix(), output=output,
+                                                   max_depth=max_depth, allow_global_phase=allow_global_phase)
+    else:
+        raise NotImplementedError('Currently only single qubit gates are supported')
+    # Check if two qubit gate and find according gate
+    # If affects three gates and more -> print that this is currently not supported
+    return substitutions
 
 
 def __try_instantiate_gate(gate_class, control: int = 0, target: int = 1, num_control_qubits: int = 1) -> list[Gate]:
@@ -313,7 +344,42 @@ def __try_instantiate_gate(gate_class, control: int = 0, target: int = 1, num_co
                 return [gate_class(phi) for phi in phis]
             elif len(required_params) == 2:
                 return [gate_class(control, target)]
-        except TypeError:
+        except (TypeError, CircuitError):
             return []
 
     return []
+
+
+def __generate_multi_qubit_gates(gates_dict: dict[str, Gate], target_qubits: int = 2, allow_identity: bool = True) -> (
+        dict)[str, np.ndarray]:
+    """
+    Generate multi-qubit gate matrices from a dictionary of gates.
+
+    This function creates a dictionary of multi-qubit gates by combining gates using the Kronecker product. It
+    ensures that the resulting gates match the specified target qubit dimension.
+
+    Args:
+        gates_dict (dict[str, Gate]): A dictionary where keys are gate names and values
+                                      are gate objects.
+        target_qubits (int, optional): The number of qubits for the target gates. Defaults to 2.
+
+    Returns:
+        dict[str, np.ndarray]: A dictionary where keys are gate names (or combinations of gate names)
+                               and values are the corresponding multi-qubit gate matrices.
+    """
+    multi_qubit_gates = {}
+    dim = target_qubits ** 2
+
+    for name1, gate1 in gates_dict.items():
+        matrix1 = gate1.to_matrix()
+        if matrix1.shape[0] == dim:
+            multi_qubit_gates[name1] = matrix1
+            continue
+
+        for name2, gate2 in gates_dict.items():
+            matrix2 = gate2.to_matrix()
+            # Check if the combined dimensions match the target dimension
+            if matrix1.shape[0] == matrix2.shape[0] and matrix1.shape[0] * matrix2.shape[0] == dim:
+                multi_qubit_gates[f"{name1}⊗{name2}"] = np.kron(matrix1, matrix2)
+
+    return multi_qubit_gates
