@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.1.2 (2025-05-15)
+
+### Bug Fixes
+
+- Pyproject.toml not updated with new version on release
+  ([`e296db6`](https://github.com/Achaad/StabiliserSuite/commit/e296db6584c1aa0f26cb8371a817801016689de1))
+
+
 ## v1.1.1 (2025-05-15)
 
 ### Bug Fixes
