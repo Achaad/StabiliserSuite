@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.1.6 (2025-05-15)
+
+### Bug Fixes
+
+- Fix publishing configuration
+  ([`be79f6b`](https://github.com/Achaad/StabiliserSuite/commit/be79f6bddf610488ef516448d0f9fc088bed964f))
+
+
 ## v1.1.5 (2025-05-15)
 
 ### Bug Fixes
