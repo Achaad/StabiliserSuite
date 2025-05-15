@@ -87,6 +87,9 @@ jobs:
           github_token: ${{ steps.generate_token.outputs.token }}
           tag: ${{ steps.prepare-release.outputs.tag }}
 
+      - name: Debug release output
+        run: echo "released = ${{ steps.release.outputs.released }}"
+
       - name: Publish | Upload package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         if: steps.release.outputs.released == 'true'
