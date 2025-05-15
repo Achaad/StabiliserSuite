@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.1.8 (2025-05-15)
+
+### Bug Fixes
+
+- Another attempt at publishing to pypi
+  ([`427a899`](https://github.com/Achaad/StabiliserSuite/commit/427a8992ccfc81bc039fb3bb062126e7fb86573a))
+
+
 ## v1.1.7 (2025-05-15)
 
 ### Bug Fixes
