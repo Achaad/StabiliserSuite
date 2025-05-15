@@ -13,6 +13,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: stabiliser-suite-env
+          environment-file: environment.yml
+          python-version: 3.12
+          auto-activate-base: false
       - name: Setup Python
         uses: actions/setup-python@v2
         with:

@@ -3,7 +3,7 @@ import qiskit
 from qiskit import QuantumCircuit
 from qiskit.transpiler import CouplingMap, CouplingError
 import termtables
-from clifford_builder import utils
+from stabiliser_suite import utils
 
 
 def sample_clifford_group(qubit_count: int, add_barriers: bool = False, coupling_map: CouplingMap = None,

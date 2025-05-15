@@ -1,0 +1,64 @@
+[project]
+name = 'StabiliserSuite'
+version = '1.1.0'
+description = 'Toolbox for Quantum Computer testing.'
+authors = [
+    { name = 'Anton Perepelenko', email = 'anton.perepelenko@achaad.eu' },
+]
+maintainers = [
+    { name = 'Anton Perepelenko', email = 'anton.perepelenko@achaad.eu' },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Natural Language :: English",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Quantum Computing",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Environment :: Console",
+    "Environment :: Jupyter",
+     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12"
+]
+readme = 'README.md'
+license = { text = 'MIT' }
+keywords = [
+  "quantum computing",
+  "nisq",
+  "clifford circuits",
+  "stabiliser",
+  "stabilizer formalism",
+  "gate transformation",
+  "tableau simulation",
+  "quantum benchmarking",
+  "qiskit",
+  "gate decomposition",
+  "python toolbox"
+]
+requires-python = '>=3.12'
+dependencies = [
+    'numpy>=2.2.0',
+    'termtables>=0.2.0'
+]
+
+[project.optional-dependencies]
+test = [
+    'pytest>=8.3.0',
+]
+
+[project.urls]
+repository = 'https://github.com/Achaad/StabiliserSuite/'
+'Bug Tracker' = 'https://github.com/Achaad/StabiliserSuite/issues'
+
+
+[build-system]
+requires = ['setuptools']
+build-backend = 'setuptools.build_meta'

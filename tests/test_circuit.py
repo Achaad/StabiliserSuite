@@ -3,7 +3,7 @@ from qiskit import QuantumCircuit
 from qiskit.quantum_info import Operator, Statevector
 from qiskit.transpiler import CouplingMap
 
-from clifford_builder import circuit
+from stabiliser_suite import circuit
 
 
 def test_cnot():
