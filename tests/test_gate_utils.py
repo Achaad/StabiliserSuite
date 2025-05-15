@@ -7,7 +7,7 @@ from sympy.testing.pytest import raises
 
 from clifford_builder.gate_utils import __are_equal_up_to_global_phase, rx, rz, __generate_two_qubit_gates, \
     generate_two_qubit_clifford_gates, __multiply_sequence, is_clifford_gate, \
-    get_non_clifford_gates, __try_instantiate_gate, get_gates, find_non_clifford_substitutions
+    get_non_clifford_gates, __try_instantiate_gate, get_gates, find_non_clifford_transformations
 
 
 def test___are_equal_up_to_global_phase():
@@ -161,9 +161,11 @@ def test___multiply_sequence():
     except ValueError:
         pass
 
+
 def test_is_clifford_gate():
     assert is_clifford_gate(HGate())
     assert not is_clifford_gate(TGate())
+
 
 def test___try_instantiate_gate():
     gates = __try_instantiate_gate(XGate)
@@ -192,7 +194,8 @@ def test___try_instantiate_gate():
     gates = __try_instantiate_gate(MCXGate)
     assert len(gates) == 1
     assert isinstance(gates[0], Instruction)
-    assert isinstance(gates[0], CXGate) # Should resolve to 1-control CX gate
+    assert isinstance(gates[0], CXGate)  # Should resolve to 1-control CX gate
+
 
 def test_get_gates():
     gates = get_gates()
@@ -202,16 +205,10 @@ def test_get_gates():
     assert isinstance(gates["XGate"], XGate)
     assert isinstance(gates["RZGate(1pi/4)"], RZGate)
 
+
 def test_get_non_clifford_gates():
     gates = get_non_clifford_gates()
     assert len(gates) > 0
     assert "TGate" in gates
     assert isinstance(gates["TGate"], TGate)
     assert "HGate" not in gates
-
-def test_find_non_clifford_substitutions():
-    gates = find_non_clifford_substitutions(XGate())
-
-    # Verify that 3+ qubit gates are not supported
-    with raises(NotImplementedError):
-        gates = find_non_clifford_substitutions(MCXGate(3))

@@ -1,11 +1,14 @@
-# Define Pauli and standard single-qubit gates
+from __future__ import annotations
 import inspect
 import itertools
+import math
 from datetime import datetime, timezone
+from typing import Tuple, Sequence, Dict, List
 
 import numpy as np
 from numba import njit
 from numba.core.types import complex128
+from numpy import ndarray
 from qiskit import QiskitError
 from qiskit.circuit import Gate, Instruction, CircuitError
 from qiskit.circuit.library import iSwapGate, XGate, YGate, ZGate, IGate, HGate, SGate, CZGate, SwapGate, \
@@ -276,23 +279,55 @@ def get_non_clifford_gates(control: int = 0, target: int = 1, num_control_qubits
     return gates
 
 
-def find_non_clifford_substitutions(gate: Gate, output: str = None, max_depth: int = 3,
-                                    allow_global_phase: bool = True) -> list[tuple[str, np.ndarray]]:
+def get_clifford_gates(control: int = 0, target: int = 1, num_control_qubits: int = 1) -> dict:
+    """
+    Retrieve a dictionary of non-Clifford quantum gates.
+
+    This function filters out non-Clifford gates from the set of all available gates
+    and returns only the Clifford gates. It uses the `get_gates` function to
+    generate all gates and the `is_clifford_gate` function to identify Clifford gates.
+
+    Args:
+        control (int, optional): The control qubit index for gates requiring control qubits. Defaults to 0.
+        target (int, optional): The target qubit index for gates requiring target qubits. Defaults to 0.
+        num_control_qubits (int, optional): The number of control qubits for gates requiring this parameter. Defaults to 1.
+
+    Returns:
+        dict: A dictionary where keys are gate names and values are the corresponding
+              Clifford gate instances.
+    """
+    all_gate_classes = get_gates(control=control, target=target, num_control_qubits=num_control_qubits)
+    gates = {name: gate_class for name, gate_class in all_gate_classes.items() if is_clifford_gate(gate_class)}
+    return gates
+
+
+def find_non_clifford_transformations(gate: Gate, max_depth: int = 3,
+                                      allow_global_phase: bool = True) -> list[tuple[Sequence[str], ndarray]]:
     substitutions = []
+    matrices = {}
     if gate.num_qubits == 1:
         all_gates = get_non_clifford_gates()
-        allowed_gates = {name: gate.to_matrix() for name, gate in all_gates.items() if gate.num_qubits == 1}
-        substitutions = find_matching_combinations(allowed_gates, target_matrix=gate.to_matrix(), output=output,
-                                                   max_depth=max_depth, allow_global_phase=allow_global_phase)
-    elif gate.num_qubits == 2:
-        all_gates = get_non_clifford_gates()
-        matrices = __generate_multi_qubit_gates(all_gates, 2)
-        substitutions = find_matching_combinations(matrices, target_matrix=gate.to_matrix(), output=output,
-                                                   max_depth=max_depth, allow_global_phase=allow_global_phase)
+        matrices = {name: gate.to_matrix() for name, gate in all_gates.items() if gate.num_qubits == 1}
     else:
-        raise NotImplementedError('Currently only single qubit gates are supported')
-    # Check if two qubit gate and find according gate
-    # If affects three gates and more -> print that this is currently not supported
+        all_gates = get_non_clifford_gates()
+        matrices = __generate_multi_qubit_gates(all_gates, gate.num_qubits)
+    substitutions = mitm_find_transformations(matrices, gate.to_matrix(), max_depth=max_depth,
+                                              allow_global_phase=allow_global_phase)
+    return substitutions
+
+
+def find_clifford_transformations(gate: Gate, max_depth: int = 3,
+                                  allow_global_phase: bool = True) -> list[tuple[Sequence[str], ndarray]]:
+    substitutions = []
+    matrices = {}
+    if gate.num_qubits == 1:
+        all_gates = get_clifford_gates()
+        matrices = {name: gate.to_matrix() for name, gate in all_gates.items() if gate.num_qubits == 1}
+    else:
+        all_gates = get_clifford_gates()
+        matrices = __generate_multi_qubit_gates(all_gates, gate.num_qubits)
+    substitutions = mitm_find_transformations(matrices, gate.to_matrix(), max_depth=max_depth,
+                                              allow_global_phase=allow_global_phase)
     return substitutions
 
 
@@ -350,7 +385,7 @@ def __try_instantiate_gate(gate_class, control: int = 0, target: int = 1, num_co
     return []
 
 
-def __generate_multi_qubit_gates(gates_dict: dict[str, Gate], target_qubits: int = 2, allow_identity: bool = True) -> (
+def __generate_multi_qubit_gates_old(gates_dict: dict[str, Gate], target_qubits: int = 2) -> (
         dict)[str, np.ndarray]:
     """
     Generate multi-qubit gate matrices from a dictionary of gates.
@@ -370,16 +405,208 @@ def __generate_multi_qubit_gates(gates_dict: dict[str, Gate], target_qubits: int
     multi_qubit_gates = {}
     dim = target_qubits ** 2
 
-    for name1, gate1 in gates_dict.items():
+    gates = gates_dict.copy()
+    gates[IGate().name] = IGate().to_matrix()
+
+    for name1, gate1 in gates.items():
         matrix1 = gate1.to_matrix()
         if matrix1.shape[0] == dim:
             multi_qubit_gates[name1] = matrix1
             continue
 
-        for name2, gate2 in gates_dict.items():
+        for name2, gate2 in gates.items():
             matrix2 = gate2.to_matrix()
             # Check if the combined dimensions match the target dimension
             if matrix1.shape[0] * matrix2.shape[0] == dim:
                 multi_qubit_gates[f"{name1}⊗{name2}"] = np.kron(matrix1, matrix2)
 
     return multi_qubit_gates
+
+
+def __generate_multi_qubit_gates(gates_dict: dict[str, Gate],
+                                 target_qubits: int = 2) -> dict[str, np.ndarray]:
+    """
+    Generate arbitrary multi-qubit gates (up to target_qubits) by taking
+    tensor products of the supplied gates.
+
+    Parameters
+    ----------
+    gates_dict : dict[str, Gate]
+        Dictionary mapping gate names to Qiskit Gate objects.  The routine
+        assumes each gate's ``num_qubits`` attribute is correct.
+    target_qubits : int
+        The desired width (number of qubits) of every generated matrix.
+
+    Returns
+    -------
+    dict[str, np.ndarray]
+        Keys are Kronecker-product strings such as "H⊗X⊗S", values are the
+        corresponding unitary matrices of dimension ``2**target_qubits``.
+    """
+    # ————————————————————————————————————————————————————————————————
+    # 1)  Build a catalogue of (name, matrix, arity) including the identity
+    # ————————————————————————————————————————————————————————————————
+    gate_specs: list[tuple[str, np.ndarray, int]] = []
+
+    for name, gate in gates_dict.items():
+        mat = gate.to_matrix()
+        gate_specs.append((name, mat, gate.num_qubits))
+
+    # ensure the identity is present for padding
+    i_name, i_mat = IGate().name, IGate().to_matrix()
+    gate_specs.append((i_name, i_mat, 1))
+
+    # Map arity → list of specs of that size (helps pruning)
+    by_arity: dict[int, list[tuple[str, np.ndarray, int]]] = {}
+    for spec in gate_specs:
+        by_arity.setdefault(spec[2], []).append(spec)
+
+    # ————————————————————————————————————————————————————————————————
+    # 2)  DFS to build all tensor products that sum to target_qubits
+    # ————————————————————————————————————————————————————————————————
+    multi_qubit_gates: dict[str, np.ndarray] = {}
+
+    def dfs(current_name: str,
+            current_mat: np.ndarray | None,
+            qubits_left: int) -> None:
+        """Recursively build Kronecker products totalling target_qubits."""
+        if qubits_left == 0:
+            multi_qubit_gates[current_name] = current_mat
+            return
+
+        # iterate over every gate whose arity ≤ qubits_left
+        for arity in range(1, qubits_left + 1):
+            for name, mat, _ in by_arity.get(arity, []):
+                new_name = name if current_name == "" else f"{current_name}⊗{name}"
+                new_mat = mat if current_mat is None else np.kron(current_mat, mat)
+                dfs(new_name, new_mat, qubits_left - arity)
+
+    dfs("", None, target_qubits)
+    return multi_qubit_gates
+
+
+def _canonicalise(mat: np.ndarray, *, allow_phase: bool) -> np.ndarray:
+    """Return matrix divided by global phase (if allowed)."""
+    if not allow_phase:
+        return mat
+    # find first non-zero entry
+    idx = np.flatnonzero(mat)
+    if idx.size == 0:
+        return mat
+    r, c = divmod(idx[0], mat.shape[0])
+    phase = mat[r, c] / abs(mat[r, c])
+    return mat / phase
+
+
+def _hash_key(mat: np.ndarray, *, allow_phase: bool) -> Tuple[float, ...]:
+    """Convert (canonical) matrix to a hashable tuple with rounding."""
+    canon = _canonicalise(mat, allow_phase=allow_phase)
+    rounded = np.round(canon.real, 12) + 1j * np.round(canon.imag, 12)
+    return tuple(rounded.ravel())
+
+
+def _matrix_equal(a: np.ndarray, b: np.ndarray,
+                  *, allow_phase: bool) -> bool:
+    """Return True if a == e^{iθ} b (or exactly equal if phase not allowed)."""
+    if allow_phase:
+        return np.allclose(_canonicalise(a, allow_phase=True),
+                           _canonicalise(b, allow_phase=True),
+                           atol=1e-8)
+    return np.allclose(a, b, atol=1e-8)
+
+
+def _enumerate_layers(gate_dict: Dict[str, np.ndarray],
+                      depth: int,
+                      allow_phase: bool
+                      ) -> Dict[Tuple[float, ...], Tuple[Sequence[str], np.ndarray]]:
+    """
+    Enumerate all products of exactly `depth` gates.
+
+    Returns a dict {hash_key → (sequence, matrix)} keeping the lexicographically
+    smallest sequence per hash key.
+    """
+    if depth == 0:
+        ident = np.eye(next(iter(gate_dict.values())).shape[0], dtype=complex)
+        key = _hash_key(ident, allow_phase=allow_phase)
+        return {key: (tuple(), ident)}
+
+    layer: Dict[Tuple[float, ...], Tuple[Sequence[str], np.ndarray]] = {}
+    gate_items = list(gate_dict.items())
+
+    # start from depth-1 layer
+    prev = _enumerate_layers(gate_dict, depth - 1, allow_phase)
+
+    for seq, mat in prev.values():
+        for gname, gmat in gate_items:
+            new_seq = seq + (gname,)
+            new_mat = gmat @ mat  # right-multiplication
+            key = _hash_key(new_mat, allow_phase=allow_phase)
+            # keep lexicographically minimal sequence for determinism
+            if key not in layer or new_seq < layer[key][0]:
+                layer[key] = (new_seq, new_mat)
+    return layer
+
+
+def mitm_find_transformations(gate_dict: Dict[str, np.ndarray],
+                              target_matrix: np.ndarray,
+                              *,
+                              max_depth: int = 3,
+                              allow_global_phase: bool = True
+                              ) -> List[Tuple[Sequence[str], np.ndarray]]:
+    """
+    Meet-in-the-middle search for gate sequences whose product equals
+    `target_matrix` (up to optional global phase).
+
+    Parameters
+    ----------
+    gate_dict
+        Mapping {gate_name → unitary matrix}.
+    target_matrix
+        Target unitary.
+    max_depth
+        Maximum total length of a candidate sequence.
+    allow_global_phase
+        If True the match is checked up to a global phase.
+
+    Returns
+    -------
+    List of (sequence, product_matrix) for every solution found.
+    """
+    results: List[Tuple[Sequence[str], np.ndarray]] = []
+    dim = target_matrix.shape[0]
+    ident = np.eye(dim, dtype=complex)
+    gates = gate_dict.copy()
+    gates[IGate().name] = ident
+
+    # split depth (ceil/ﬂoor)
+    left_depth = math.ceil(max_depth / 2)
+    right_depth = max_depth - left_depth
+
+    # pre-compute all left products up to left_depth
+    left_tables = []
+    for d in range(left_depth + 1):
+        left_tables.append(_enumerate_layers(gates, d,
+                                             allow_phase=allow_global_phase))
+
+    # enumerate right side from depth 0 … right_depth
+    for d_r in range(right_depth + 1):
+        right_table = _enumerate_layers(gates, d_r,
+                                        allow_phase=allow_global_phase)
+
+        for r_key, (r_seq, r_mat) in right_table.items():
+            # Needed left matrix to satisfy L · R = U_target
+            needed = target_matrix @ np.linalg.inv(r_mat)
+            needed_key = _hash_key(needed, allow_phase=allow_global_phase)
+
+            # check every possible left depth up to remaining budget
+            max_left_index = min(left_depth, max_depth - d_r)
+            for d_l in range(max_left_index, -1, -1):
+                if needed_key in left_tables[d_l]:
+                    l_seq, l_mat = left_tables[d_l][needed_key]
+                    # sanity check
+                    prod = r_mat @ l_mat
+                    if _matrix_equal(prod, target_matrix,
+                                     allow_phase=allow_global_phase):
+                        results.append((l_seq + r_seq, prod))
+
+    return results
