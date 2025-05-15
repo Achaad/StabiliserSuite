@@ -5,7 +5,7 @@ module.exports = {
     "branches": [
         "master"
         ],
-    "prepare": [
+    "exec": [
         {
             "cmd": "sed -i  \"s/^version\\s*=\\s*'.*'/version = '${nextRelease.version}'/\" pyproject.toml"
         }
