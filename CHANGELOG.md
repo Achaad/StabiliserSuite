@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.1.9 (2025-05-15)
+
+### Bug Fixes
+
+- Fix classifiers
+  ([`de2b591`](https://github.com/Achaad/StabiliserSuite/commit/de2b591db2a98b415e47c266f720290694198312))
+
+
 ## v1.1.8 (2025-05-15)
 
 ### Bug Fixes
