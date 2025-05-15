@@ -5,9 +5,9 @@ module.exports = {
     "branches": [
         "master"
         ],
-    "exec": [
+    "prepare": [
         {
-            "prepareCmd": "sed -i \"s/^version\\s*=\\s*'.*'/version = '${nextRelease.version}'/\" pyproject.toml"
+            "cmd": "sed -i \"s/^version\\s*=\\s*'.*'/version = '${nextRelease.version}'/\" pyproject.toml"
         }
         ],
     "plugins": [
@@ -30,11 +30,6 @@ module.exports = {
             ],
             "message": "chore(release): version ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
             }
-        ],
-        [
-            "@semantic-release/exec",
-            {
-                "prepareCmd": "echo 'Preparing release ${nextRelease.version}'"
-            }]
+        ]
     ]
 }
