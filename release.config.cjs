@@ -11,7 +11,8 @@ module.exports = {
         [
             "@semantic-release/exec",
             {
-                "prepareCmd": "sed -i \"s/^version\\s*=\\s*'.*'/version = '${nextRelease.version}'/\" pyproject.toml"
+                "generateNotesCmd": "sed -i \"s/^version\\s*=\\s*'.*'/version = '${nextRelease.version}'/\"" +
+                    " pyproject.toml"
             }
         ],
         [
