@@ -6,6 +6,12 @@ module.exports = {
         "master"
         ],
     "plugins": [
+        [
+            "@semantic-release/exec",
+            {
+                "prepareCmd": "cat pyproject.toml"
+            }
+        ],
         "@semantic-release/commit-analyzer",
         "@semantic-release/release-notes-generator",
         [
