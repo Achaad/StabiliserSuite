@@ -5,13 +5,8 @@ module.exports = {
     "branches": [
         "master"
         ],
+    "prepare": "echo 'Preparing release...'",
     "plugins": [
-        [
-            "@semantic-release/exec",
-            {
-                "prepareCmd": "cat pyproject.toml"
-            }
-        ],
         "@semantic-release/commit-analyzer",
         "@semantic-release/release-notes-generator",
         [
@@ -19,6 +14,12 @@ module.exports = {
             {
             "changelogFile": "CHANGELOG.md",
             "changelogTitle": "# Changelog\n\nAll notable changes to this project will be documented in this file."
+            }
+        ],
+        [
+            "@semantic-release/exec",
+            {
+                "prepareCmd": "cat pyproject.toml"
             }
         ],
         "@semantic-release/github",
