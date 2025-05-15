@@ -16,7 +16,7 @@ Toolbox for benchmarking and stress‑testing NISQ quantum processors
 * **Topology‑aware routing** – 4‑CNOT “bridge’’ pattern for non‑adjacent CNOTs on heavy‑hex and ion‑trap layouts  
 * **Gate‑transformation search** – meet‑in‑the‑middle engine (canonical‑phase hashing, memoisation) finds depth‑bounded Clifford / non‑Clifford substitutions  
 * **Unified workflow** – circuit synthesis → classical stabiliser simulation → Qiskit hardware run → fidelity report  
-* **Open‑source & extensible** – MIT licence, clean Python API, minimal external deps
+* **Open‑source & extensible** – MIT licence, clean Python API, minimal external deps 
 
 ---
 
