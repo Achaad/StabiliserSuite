@@ -78,9 +78,14 @@ jobs:
           tag: true
 
       - name: Release to GitHub
+        id: release
         uses: python-semantic-release/publish-action@v9.21.1
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
         with:
           github_token: ${{ steps.generate_token.outputs.token }}
           tag: ${{ steps.prepare-release.outputs.tag }}
+
+      - name: Publish | Upload package to PyPI
+        uses: pypa/gh-action-pypi-publish@v1
+        if: steps.release.outputs.released == 'true'
