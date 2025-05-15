@@ -86,7 +86,7 @@ jobs:
         with:
           github_token: ${{ steps.generate_token.outputs.token }}
           tag: ${{ steps.prepare-release.outputs.tag }}
-
-      - name: Publish | Upload package to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        if: steps.prepare-release.outputs.released == 'true'
+#
+#      - name: Publish | Upload package to PyPI
+#        uses: pypa/gh-action-pypi-publish@release/v1
+#        if: steps.prepare-release.outputs.released == 'true'
