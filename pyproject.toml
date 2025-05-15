@@ -1,5 +1,5 @@
 [project]
-name = 'StabiliserSuite'
+name = 'stabiliser_suite'
 version = '1.1.0'
 description = 'Toolbox for Quantum Computer testing.'
 authors = [
