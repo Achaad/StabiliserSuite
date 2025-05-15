@@ -1,6 +1,6 @@
 [project]
 name = 'StabiliserSuite'
-version = "v1.1.2"
+version = "v1.1.3"
 description = 'Toolbox for Quantum Computer testing.'
 authors = [
     { name = 'Anton Perepelenko', email = 'anton.perepelenko@achaad.eu' },

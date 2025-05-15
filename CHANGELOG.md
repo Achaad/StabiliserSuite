@@ -1,6 +1,21 @@
 # CHANGELOG
 
 
+## v1.1.3 (2025-05-15)
+
+### Bug Fixes
+
+- Update publishing ci
+  ([`03c7628`](https://github.com/Achaad/StabiliserSuite/commit/03c7628e8104dccd876e184f2915c48f8da39780))
+
+### Continuous Integration
+
+- Add publishing to pypi ([#49](https://github.com/Achaad/StabiliserSuite/pull/49),
+  [`9029413`](https://github.com/Achaad/StabiliserSuite/commit/902941370e4f59ca51aa5a221c8c3cee35e93978))
+
+Co-authored-by: Achaad <achaad@achaad.eu>
+
+
 ## v1.1.2 (2025-05-15)
 
 ### Bug Fixes
