@@ -3,7 +3,7 @@
 Toolbox for benchmarking and stress‑testing NISQ quantum processors  
 *Clifford circuits • topology‑aware routing • gate‑transformation search*
 
-[![CI](https://img.shields.io/github/actions/workflow/status/Achaad/StabiliserSuite/ci.yml?branch=main&logo=github)](https://github.com/Achaad/StabiliserSuite/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/Achaad/StabiliserSuite/build.yml?branch=master&logo=github)](https://github.com/Achaad/StabiliserSuite/actions)
 [![PyPI](https://img.shields.io/pypi/v/stabilisersuite?color=blue)](https://pypi.org/project/stabilisersuite)
 [![conda-forge](https://img.shields.io/conda/vn/conda-forge/stabilisersuite?color=green)](https://anaconda.org/conda-forge/stabilisersuite)
 [![MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
