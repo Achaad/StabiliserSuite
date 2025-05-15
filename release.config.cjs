@@ -5,10 +5,10 @@ module.exports = {
     "branches": [
         "master"
         ],
-    "prepare": [
+    "publish": [
         {
             "path": "@semantic-release/exec",
-            "cprepareCmd": "echo 'Preparing release ${nextRelease.version}'"
+            "prepareCmd": "echo 'Preparing release ${nextRelease.version}'"
         }
         ],
     "plugins": [
