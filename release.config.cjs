@@ -9,12 +9,6 @@ module.exports = {
         "@semantic-release/commit-analyzer",
         "@semantic-release/release-notes-generator",
         [
-            "@semantic-release/exec",
-            {
-                "prepareCmd": "echo 0"
-            }
-        ],
-        [
             "@semantic-release/changelog",
             {
             "changelogFile": "CHANGELOG.md",
