@@ -7,6 +7,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  id-token: write
 
 jobs:
   release:
@@ -87,5 +88,5 @@ jobs:
           tag: ${{ steps.prepare-release.outputs.tag }}
 
       - name: Publish | Upload package to PyPI
-        uses: pypa/gh-action-pypi-publish@v1
+        uses: pypa/gh-action-pypi-publish@release/v1
         if: steps.release.outputs.released == 'true'
