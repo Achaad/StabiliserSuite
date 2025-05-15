@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.1.4 (2025-05-15)
+
+### Bug Fixes
+
+- Trigger release
+  ([`ee14c71`](https://github.com/Achaad/StabiliserSuite/commit/ee14c714cb6f8307424535501a60320f3931f5b7))
+
+
 ## v1.1.3 (2025-05-15)
 
 ### Bug Fixes
