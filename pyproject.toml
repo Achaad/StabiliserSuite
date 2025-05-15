@@ -46,7 +46,8 @@ keywords = [
 requires-python = '>=3.12'
 dependencies = [
     'numpy>=2.2.0',
-    'termtables>=0.2.0'
+    'termtables>=0.2.0',
+    'build>=1.2.0'
 ]
 
 [project.optional-dependencies]
