@@ -7,8 +7,7 @@ module.exports = {
         ],
     "publish": [
         {
-            "path": "@semantic-release/exec",
-            "prepareCmd": "echo 'Preparing release ${nextRelease.version}'"
+            "cmd": "echo 'Preparing release ${nextRelease.version}'"
         }
         ],
     "plugins": [
