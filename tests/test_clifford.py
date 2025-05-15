@@ -3,7 +3,7 @@ from qiskit import QuantumCircuit
 from qiskit.transpiler import CouplingMap
 from sympy.testing.pytest import raises
 
-from clifford_builder import clifford, utils
+from stabiliser_suite import clifford, utils
 
 
 def test___apply_hadamard():

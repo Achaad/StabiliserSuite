@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 from qiskit.circuit.library import HGate, CXGate
 
-from clifford_builder.gate_utils import find_non_clifford_transformations
+from stabiliser_suite.gate_utils import find_non_clifford_transformations
 
 targets = [("CX (two qubit)", CXGate())]
 depths  = list(range(1, 11))          # test max_depth = 1 … 9

@@ -5,7 +5,7 @@ from qiskit.circuit.library import iSwapGate, HGate, TGate, RZGate, XGate, CXGat
 from qiskit.circuit.gate import Gate
 from sympy.testing.pytest import raises
 
-from clifford_builder.gate_utils import __are_equal_up_to_global_phase, rx, rz, __generate_two_qubit_gates, \
+from stabiliser_suite.gate_utils import __are_equal_up_to_global_phase, rx, rz, __generate_two_qubit_gates, \
     generate_two_qubit_clifford_gates, __multiply_sequence, is_clifford_gate, \
     get_non_clifford_gates, __try_instantiate_gate, get_gates, find_non_clifford_transformations
 

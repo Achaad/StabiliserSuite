@@ -1,4 +1,4 @@
-from clifford_builder import utils
+from stabiliser_suite import utils
 
 import numpy as np
 
