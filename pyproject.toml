@@ -20,8 +20,7 @@ classifiers = [
     "Topic :: Software Development :: Testing",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Environment :: Console",
-    "Environment :: Jupyter",
-     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -31,17 +30,17 @@ classifiers = [
 readme = 'README.md'
 license = { text = 'MIT' }
 keywords = [
-  "quantum computing",
-  "nisq",
-  "clifford circuits",
-  "stabiliser",
-  "stabilizer formalism",
-  "gate transformation",
-  "tableau simulation",
-  "quantum benchmarking",
-  "qiskit",
-  "gate decomposition",
-  "python toolbox"
+    "quantum computing",
+    "nisq",
+    "clifford circuits",
+    "stabiliser",
+    "stabilizer formalism",
+    "gate transformation",
+    "tableau simulation",
+    "quantum benchmarking",
+    "qiskit",
+    "gate decomposition",
+    "python toolbox"
 ]
 requires-python = '>=3.12'
 dependencies = [
@@ -68,11 +67,11 @@ build-backend = 'setuptools.build_meta'
 version_source = "master"
 branch = "master"
 tag_format = "v{version}"
-version_toml =[ "pyproject.toml:project.version:tf" ]
+version_toml = ["pyproject.toml:project.version:tf"]
 upload_to_pypi = true
 changelog_file = "CHANGELOG.md"
 commit_message = "chore(release): {version}"
-token = { env = "GITHUB_TOKEN"}
+token = { env = "GITHUB_TOKEN" }
 major_on_zero = true
 allow_zero_version = true
 
