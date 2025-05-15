@@ -1,4 +1,7 @@
-{
+/**
+ * @type {import('semantic-release').GlobalConfig}
+ */
+module.exports = {
     "branches": [
         "master"
         ],
@@ -6,15 +9,16 @@
         "@semantic-release/commit-analyzer",
         "@semantic-release/release-notes-generator",
         [
+            "@semantic-release/exec",
+            {
+                "prepareCmd": "sed -i \"s/^version\\s*=\\s*'.*'/version = '${nextRelease.version}'/\" pyproject.toml"
+            }
+        ],
+        [
             "@semantic-release/changelog",
             {
             "changelogFile": "CHANGELOG.md",
             "changelogTitle": "# Changelog\n\nAll notable changes to this project will be documented in this file."
-            }
-        ],
-        ["@semantic-release/exec",
-            {
-            "prepareCmd": "sed -i \"s/^version\\s*=\\s*'.*'/version = '\\${nextRelease.version}'/\" pyproject.toml"
             }
         ],
         "@semantic-release/github",
