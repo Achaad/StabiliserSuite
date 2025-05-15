@@ -5,9 +5,9 @@ module.exports = {
     "branches": [
         "master"
         ],
-    "publish": [
+    "exec": [
         {
-            "cmd": "echo 'Preparing release ${nextRelease.version}'"
+            "prepareCmd": "echo 'Preparing release ${nextRelease.version}'"
         }
         ],
     "plugins": [
