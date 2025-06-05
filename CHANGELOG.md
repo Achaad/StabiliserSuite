@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.1.11 (2025-06-05)
+
+### Bug Fixes
+
+- Incorrect pyproj configuration
+  ([`dac6911`](https://github.com/Achaad/StabiliserSuite/commit/dac6911c8c42d139f61069a15593d12c9a7ade67))
+
+
 ## v1.1.10 (2025-06-05)
 
 ### Bug Fixes
