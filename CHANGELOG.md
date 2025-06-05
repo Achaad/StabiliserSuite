@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.1.10 (2025-06-05)
+
+### Bug Fixes
+
+- Add missing required dependencies
+  ([`7f98ae6`](https://github.com/Achaad/StabiliserSuite/commit/7f98ae6b3727e43ba57d7b2021678ffbf3d5d355))
+
+- Missing modules export
+  ([`33c8fcd`](https://github.com/Achaad/StabiliserSuite/commit/33c8fcd773c304c772ce75075a5f952636945f89))
+
+
 ## v1.1.9 (2025-05-15)
 
 ### Bug Fixes
