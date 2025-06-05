@@ -1,0 +1,8 @@
+package: StabiliserSuite
+version: v1.1.9
+
+about:
+  home: "https://github.com/Achaad/StabiliserSuite"
+  summary: "Toolbox for generating, transforming and benchmarking Clifford circuits on NISQ hardware."
+  license: "MIT"
+  license_file: "LICENSE"
